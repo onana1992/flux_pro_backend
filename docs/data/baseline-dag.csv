@@ -1,0 +1,31 @@
+ref_registre;direction;type_dossier;type_libelle;objet;priorite;date_reception;date_cloture;delai_total_jours;delai_cible_jo;responsable_identifie;respect_delai_interne;maillon_blocage;jours_au_blocage;source_donnee;observations
+REG-DAG-2024-0001;DAG;COUR-STD;Courrier entrant;Demande de renseignements sur permis de construire;Normal;2024-01-05;2024-02-06;23;11;non;non;Expedition reponse;21;Classeur Excel partage;
+REG-DAG-2024-0002;DAG;COUR-STD;Courrier entrant;Invitation ceremonie pose premiere pierre;Normal;2024-02-08;2024-03-10;24;11;oui;non;Agent traitant;9;Cahier transmission;Retard non signale
+REG-DAG-2024-0003;DAG;COUR-STD;Courrier entrant;Reclamation delai traitement dossier partenaire;Normal;2024-03-12;2024-04-14;24;11;non;non;Directeur destinataire;13;Classeur Excel partage;Circuit incomplet sur registre
+REG-DAG-2024-0004;DAG;COUR-STD;Courrier entrant;Transmission compte rendu reunion interministerielle;Normal;2024-04-03;2024-05-11;30;11;non;non;Orientation chef courrier;15;Cahier transmission;Circuit incomplet sur registre
+REG-DAG-2024-0005;DAG;COUR-STD;Courrier entrant;Sollicitation appui logistique mission terrain;Normal;2024-05-17;2024-06-19;24;11;oui;non;Reception DAG;16;Cahier transmission;Absence visa intermediaire
+REG-DAG-2024-0006;DAG;COUR-STD;Courrier entrant;Courrier recommande societe privee BTP;Urgent;2024-06-09;2024-06-23;14;11;non;oui;Orientation chef courrier;9;Email sans suivi;Absence visa intermediaire
+REG-DAG-2024-0007;DAG;COUR-STD;Courrier entrant;Note de service interne a diffuser;Normal;2024-07-22;2024-08-27;27;11;non;non;Reception DAG;19;Cahier transmission;Dossier revenu en arriere sans trace
+REG-DAG-2024-0008;DAG;COUR-STD;Courrier entrant;Demande audience Directeur;Normal;2024-08-14;2024-09-15;23;11;non;oui;Agent traitant;9;Cahier transmission;
+REG-DAG-2024-0009;DAG;COUR-STD;Courrier entrant;Correspondance ambassade cooperation technique;Normal;2024-09-06;2024-10-07;23;11;non;oui;Expedition reponse;13;Classeur Excel partage;Circuit incomplet sur registre
+REG-DAG-2024-0010;DAG;COUR-STD;Courrier entrant;Reponse attendue sur convention cadre;Tres urgent;2024-10-19;2024-11-22;25;11;oui;oui;Orientation chef courrier;11;Cahier transmission;Circuit incomplet sur registre
+REG-DAG-2024-0011;DAG;COUR-STD;Courrier entrant;Demande de renseignements sur permis de construire;Urgent;2024-11-11;2024-12-15;26;11;non;oui;Validation chef service;22;Classeur Excel partage;
+REG-DAG-2024-0012;DAG;COUR-STD;Courrier entrant;Invitation ceremonie pose premiere pierre;Urgent;2024-12-04;2024-01-15;33;11;oui;non;Reception DAG;28;Classeur Excel partage;Absence visa intermediaire
+REG-DAG-2024-0013;DAG;COUR-STD;Courrier entrant;Reclamation delai traitement dossier partenaire;Normal;2024-01-05;2024-02-12;29;11;non;oui;Reception DAG;17;Cahier transmission;
+REG-DAG-2024-0014;DAG;COUR-STD;Courrier entrant;Transmission compte rendu reunion interministerielle;Urgent;2024-02-08;2024-03-11;25;11;non;oui;Reception DAG;14;Cahier transmission;Absence visa intermediaire
+REG-DAG-2024-0015;DAG;COUR-STD;Courrier entrant;Sollicitation appui logistique mission terrain;Urgent;2024-03-12;2024-04-04;20;11;non;non;Expedition reponse;6;Classeur Excel partage;Dossier revenu en arriere sans trace
+REG-DAG-2024-0016;DAG;COUR-STD;Courrier entrant;Courrier recommande societe privee BTP;Normal;2024-04-03;2024-04-20;17;11;non;non;Agent traitant;8;Registre papier courrier;Circuit incomplet sur registre
+REG-DAG-2024-0017;DAG;COUR-STD;Courrier entrant;Note de service interne a diffuser;Urgent;2024-05-17;2024-06-21;26;11;non;oui;Validation chef service;10;Cahier transmission;Circuit incomplet sur registre
+REG-DAG-2024-0018;DAG;COUR-STD;Courrier entrant;Demande audience Directeur;Normal;2024-06-09;2024-07-22;35;11;non;oui;Expedition reponse;30;Email sans suivi;Circuit incomplet sur registre
+REG-DAG-2024-0019;DAG;COUR-STD;Courrier entrant;Correspondance ambassade cooperation technique;Tres urgent;2024-07-22;2024-08-25;25;11;non;non;Reception DAG;17;Email sans suivi;Absence visa intermediaire
+REG-DAG-2024-0020;DAG;COUR-STD;Courrier entrant;Reponse attendue sur convention cadre;Normal;2024-08-14;2024-09-16;24;11;non;oui;Directeur destinataire;9;Classeur Excel partage;Retard non signale
+REG-DAG-2024-0021;DAG;COUR-STD;Courrier entrant;Demande de renseignements sur permis de construire;Normal;2024-09-06;2024-10-12;28;11;oui;oui;Orientation chef courrier;10;Cahier transmission;Retard non signale
+REG-DAG-2024-0022;DAG;COUR-STD;Courrier entrant;Invitation ceremonie pose premiere pierre;Urgent;2024-10-19;2024-11-05;14;11;non;oui;Directeur destinataire;8;Email sans suivi;Circuit incomplet sur registre
+REG-DAG-2024-0023;DAG;COUR-STD;Courrier entrant;Reclamation delai traitement dossier partenaire;Normal;2024-11-11;2024-12-11;22;11;non;non;Expedition reponse;14;Cahier transmission;Dossier revenu en arriere sans trace
+REG-DAG-2024-0024;DAG;COUR-STD;Courrier entrant;Transmission compte rendu reunion interministerielle;Urgent;2024-12-04;2024-01-11;29;11;oui;oui;Validation chef service;20;Email sans suivi;Dossier revenu en arriere sans trace
+REG-DAG-2024-0025;DAG;COUR-STD;Courrier entrant;Sollicitation appui logistique mission terrain;Normal;2024-01-05;2024-02-14;31;11;non;non;Reception DAG;13;Registre papier courrier;Dossier revenu en arriere sans trace
+REG-DAG-2024-0026;DAG;COUR-STD;Courrier entrant;Courrier recommande societe privee BTP;Urgent;2024-02-08;2024-03-10;24;11;non;oui;Directeur destinataire;11;Email sans suivi;Circuit incomplet sur registre
+REG-DAG-2024-0027;DAG;COUR-STD;Courrier entrant;Note de service interne a diffuser;Normal;2024-03-12;2024-04-17;27;11;oui;oui;Orientation chef courrier;23;Registre papier courrier;Retard non signale
+REG-DAG-2024-0028;DAG;COUR-STD;Courrier entrant;Demande audience Directeur;Normal;2024-04-03;2024-05-07;26;11;non;oui;Orientation chef courrier;15;Cahier transmission;Dossier revenu en arriere sans trace
+REG-DAG-2024-0029;DAG;COUR-STD;Courrier entrant;Correspondance ambassade cooperation technique;Normal;2024-05-17;2024-06-25;30;11;oui;oui;Orientation chef courrier;15;Email sans suivi;Retard non signale
+REG-DAG-2024-0030;DAG;COUR-STD;Courrier entrant;Reponse attendue sur convention cadre;Tres urgent;2024-06-09;2024-06-27;18;11;oui;non;Validation chef service;10;Email sans suivi;

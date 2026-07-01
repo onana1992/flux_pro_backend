@@ -1,0 +1,16 @@
+code;nom;type;parent_code;actif
+MINTP;Ministère des Travaux Publics;MINISTERE;;TRUE
+MINTP-CABINET;Cabinet du Ministre;DIRECTION;MINTP;TRUE
+MINTP-SG;Secrétariat Général;DIRECTION;MINTP;TRUE
+DSI;Direction des Systèmes d'Information;DIRECTION;MINTP;TRUE
+DAG;Direction des Affaires Générales;DIRECTION;MINTP;TRUE
+DAG-COURRIER;Service Courrier;SERVICE;DAG;TRUE
+DAG-ARCHIVES;Service Archives;SERVICE;DAG;TRUE
+DIER;Direction des Investissements et de l'Entretien Routier;DIRECTION;MINTP;TRUE
+DIER-MARCHES;Service Marchés Publics;SERVICE;DIER;TRUE
+DIER-TECH;Division Technique;DIVISION;DIER;TRUE
+DIER-BUDGET;Sous-direction Budget;DIVISION;DIER;TRUE
+DIER-PROG;Division Programmation;DIVISION;DIER;TRUE
+DRTP-C;DRTP du Centre;DRTP;MINTP;TRUE
+DRTP-C-AUTH;Service Autorisations travaux;SERVICE;DRTP-C;TRUE
+DRTP-C-ROUTES;Service Routes nationales;SERVICE;DRTP-C;TRUE
