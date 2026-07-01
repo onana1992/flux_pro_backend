@@ -1,0 +1,148 @@
+package com.nanotech.flux_pro_backend.service;
+
+import com.nanotech.flux_pro_backend.dto.response.TokenResponse;
+import com.nanotech.flux_pro_backend.dto.response.UserProfileResponse;
+import com.nanotech.flux_pro_backend.entity.RefreshToken;
+import com.nanotech.flux_pro_backend.entity.User;
+import com.nanotech.flux_pro_backend.mapper.DtoMapper;
+import com.nanotech.flux_pro_backend.repository.RefreshTokenRepository;
+import com.nanotech.flux_pro_backend.repository.UserRepository;
+import com.nanotech.flux_pro_backend.security.JwtTokenProvider;
+import com.nanotech.flux_pro_backend.security.PasswordValidator;
+import com.nanotech.flux_pro_backend.security.SecurityUser;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final int LOCK_MINUTES = 30;
+
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final LoginAuditService loginAuditService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    @Transactional
+    public TokenResponse login(String email, String password, HttpServletRequest request) {
+        String normalizedEmail = email.toLowerCase().trim();
+        User user = userRepository.findByEmail(normalizedEmail).orElse(null);
+
+        if (user == null) {
+            loginAuditService.log(null, normalizedEmail, false, request, "UNKNOWN_EMAIL");
+            throw new BadCredentialsException("Invalid email or password");
+        }
+
+        if (!user.isActive()) {
+            loginAuditService.log(user, normalizedEmail, false, request, "USER_INACTIVE");
+            throw new BadCredentialsException("Account inactive");
+        }
+
+        if (isLocked(user)) {
+            long minutes = ChronoUnit.MINUTES.between(Instant.now(), user.getLockedUntil()) + 1;
+            loginAuditService.log(user, normalizedEmail, false, request, "ACCOUNT_LOCKED");
+            throw new LockedException("Account temporarily locked. Try again in " + minutes + " minutes.");
+        }
+
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
+            if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
+                user.setLockedUntil(Instant.now().plus(LOCK_MINUTES, ChronoUnit.MINUTES));
+            }
+            userRepository.save(user);
+            loginAuditService.log(user, normalizedEmail, false, request, "INVALID_PASSWORD");
+            throw new BadCredentialsException("Invalid email or password");
+        }
+
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userRepository.save(user);
+        loginAuditService.log(user, normalizedEmail, true, request, null);
+
+        return buildTokenResponse(user);
+    }
+
+    @Transactional
+    public TokenResponse refresh(String refreshTokenValue) {
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenAndRevokedFalse(refreshTokenValue)
+                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+
+        if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+            throw new BadCredentialsException("Refresh token expired");
+        }
+
+        User user = refreshToken.getUser();
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+        return buildTokenResponse(user);
+    }
+
+    @Transactional
+    public void logout(String refreshTokenValue) {
+        refreshTokenRepository.findByTokenAndRevokedFalse(refreshTokenValue).ifPresent(token -> {
+            token.setRevoked(true);
+            refreshTokenRepository.save(token);
+        });
+    }
+
+    @Transactional
+    public void changePassword(SecurityUser user, String currentPassword, String newPassword) {
+        PasswordValidator.validate(newPassword);
+        User entity = userRepository.findById(user.getId())
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
+
+        if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
+            throw new BadCredentialsException("Current password is incorrect");
+        }
+
+        entity.setPasswordHash(passwordEncoder.encode(newPassword));
+        entity.setMustChangePassword(false);
+        userRepository.save(entity);
+        refreshTokenRepository.deleteByUserId(entity.getId());
+    }
+
+    private TokenResponse buildTokenResponse(User user) {
+        SecurityUser securityUser = new SecurityUser(user);
+        String accessToken = jwtTokenProvider.createAccessToken(securityUser);
+        String refreshValue = jwtTokenProvider.createRefreshTokenValue();
+
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setToken(refreshValue);
+        refreshToken.setUser(user);
+        refreshToken.setExpiresAt(Instant.now().plusMillis(jwtTokenProvider.getRefreshExpirationMs()));
+        refreshTokenRepository.save(refreshToken);
+
+        UserProfileResponse profile = DtoMapper.toProfile(user);
+        return new TokenResponse(
+                accessToken,
+                refreshValue,
+                jwtTokenProvider.getAccessExpirationSeconds(),
+                profile);
+    }
+
+    private boolean isLocked(User user) {
+        if (user.getLockedUntil() == null) {
+            return false;
+        }
+        if (user.getLockedUntil().isBefore(Instant.now())) {
+            user.setLockedUntil(null);
+            user.setFailedLoginAttempts(0);
+            userRepository.save(user);
+            return false;
+        }
+        return true;
+    }
+}

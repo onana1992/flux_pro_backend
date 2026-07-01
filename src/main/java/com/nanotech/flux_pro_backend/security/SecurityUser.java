@@ -1,6 +1,7 @@
 package com.nanotech.flux_pro_backend.security;
 
-import com.nanotech.flux_pro_backend.utilisateur.Utilisateur;
+import com.nanotech.flux_pro_backend.entity.User;
+import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,18 +18,18 @@ public class SecurityUser implements UserDetails {
     private final String email;
     private final String passwordHash;
     private final UserRole role;
-    private final UUID organisationId;
-    private final String organisationCode;
-    private final boolean actif;
+    private final UUID organizationId;
+    private final String organizationCode;
+    private final boolean active;
 
-    public SecurityUser(Utilisateur utilisateur) {
-        this.id = utilisateur.getId();
-        this.email = utilisateur.getEmail();
-        this.passwordHash = utilisateur.getPasswordHash();
-        this.role = utilisateur.getRole();
-        this.organisationId = utilisateur.getOrganisation().getId();
-        this.organisationCode = utilisateur.getOrganisation().getCode();
-        this.actif = utilisateur.isActif();
+    public SecurityUser(User user) {
+        this.id = user.getId();
+        this.email = user.getEmail();
+        this.passwordHash = user.getPasswordHash();
+        this.role = user.getRole();
+        this.organizationId = user.getOrganization().getId();
+        this.organizationCode = user.getOrganization().getCode();
+        this.active = user.isActive();
     }
 
     @Override
@@ -63,6 +64,6 @@ public class SecurityUser implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return actif;
+        return active;
     }
 }

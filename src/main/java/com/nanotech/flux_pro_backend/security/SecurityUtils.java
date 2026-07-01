@@ -9,7 +9,7 @@ public class SecurityUtils {
     public SecurityUser currentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof SecurityUser user)) {
-            throw new IllegalStateException("Utilisateur non authentifié");
+            throw new IllegalStateException("User not authenticated");
         }
         return user;
     }

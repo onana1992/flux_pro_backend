@@ -1,6 +1,6 @@
 package com.nanotech.flux_pro_backend.security;
 
-import com.nanotech.flux_pro_backend.utilisateur.UtilisateurRepository;
+import com.nanotech.flux_pro_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -12,13 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final UtilisateurRepository utilisateurRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return utilisateurRepository.findByEmail(username.toLowerCase().trim())
+        return userRepository.findByEmail(username.toLowerCase().trim())
                 .map(SecurityUser::new)
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur introuvable: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }

@@ -1,11 +1,11 @@
 package com.nanotech.flux_pro_backend.config;
 
-import com.nanotech.flux_pro_backend.organisation.Organisation;
-import com.nanotech.flux_pro_backend.organisation.OrganisationRepository;
-import com.nanotech.flux_pro_backend.organisation.OrganisationType;
-import com.nanotech.flux_pro_backend.security.UserRole;
-import com.nanotech.flux_pro_backend.utilisateur.Utilisateur;
-import com.nanotech.flux_pro_backend.utilisateur.UtilisateurRepository;
+import com.nanotech.flux_pro_backend.entity.Organization;
+import com.nanotech.flux_pro_backend.entity.User;
+import com.nanotech.flux_pro_backend.enumeration.OrganizationType;
+import com.nanotech.flux_pro_backend.enumeration.UserRole;
+import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
+import com.nanotech.flux_pro_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -18,8 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 
-    private final OrganisationRepository organisationRepository;
-    private final UtilisateurRepository utilisateurRepository;
+    private final OrganizationRepository organizationRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     private static final String[][] DRTP_SEED = {
@@ -38,59 +38,59 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        Organisation mintp = organisationRepository.findByCode("MINTP").orElseGet(() -> {
-            Organisation root = new Organisation();
+        Organization mintp = organizationRepository.findByCode("MINTP").orElseGet(() -> {
+            Organization root = new Organization();
             root.setCode("MINTP");
-            root.setNom("Ministère des Travaux Publics");
-            root.setType(OrganisationType.MINISTERE);
-            root.setActif(true);
-            log.info("Seed: création organisation MINTP");
-            return organisationRepository.save(root);
+            root.setName("Ministère des Travaux Publics");
+            root.setType(OrganizationType.MINISTRY);
+            root.setActive(true);
+            log.info("Seed: created MINTP organization");
+            return organizationRepository.save(root);
         });
 
         for (String[] drtp : DRTP_SEED) {
-            if (organisationRepository.findByCode(drtp[0]).isEmpty()) {
-                Organisation org = new Organisation();
+            if (organizationRepository.findByCode(drtp[0]).isEmpty()) {
+                Organization org = new Organization();
                 org.setCode(drtp[0]);
-                org.setNom(drtp[1]);
-                org.setType(OrganisationType.DRTP);
+                org.setName(drtp[1]);
+                org.setType(OrganizationType.REGIONAL_DIRECTORATE);
                 org.setParent(mintp);
-                org.setActif(true);
-                organisationRepository.save(org);
+                org.setActive(true);
+                organizationRepository.save(org);
                 log.info("Seed: DRTP {}", drtp[0]);
             }
         }
 
-        seedOrganisationIfMissing("DSI", "Direction des Systèmes d'Information", OrganisationType.DIRECTION, mintp);
+        seedOrganizationIfMissing("DSI", "Direction des Systèmes d'Information", OrganizationType.DIRECTORATE, mintp);
 
-        Organisation dsi = organisationRepository.findByCode("DSI").orElseThrow();
-        if (utilisateurRepository.findByEmail("e.fotso@mintp.cm").isEmpty()) {
-            Utilisateur admin = new Utilisateur();
-            admin.setMatricule("MAT-2014-0006");
+        Organization dsi = organizationRepository.findByCode("DSI").orElseThrow();
+        if (userRepository.findByEmail("e.fotso@mintp.cm").isEmpty()) {
+            User admin = new User();
+            admin.setStaffNumber("MAT-2014-0006");
             admin.setEmail("e.fotso@mintp.cm");
-            admin.setNom("FOTSO");
-            admin.setPrenom("Emmanuel");
-            admin.setTelephone("+237 677 20 10 01");
+            admin.setLastName("FOTSO");
+            admin.setFirstName("Emmanuel");
+            admin.setPhone("+237 677 20 10 01");
             admin.setRole(UserRole.SUPER_ADMIN);
-            admin.setOrganisation(dsi);
-            admin.setFonction("Administrateur système");
+            admin.setOrganization(dsi);
+            admin.setJobTitle("System administrator");
             admin.setPasswordHash(passwordEncoder.encode("Mintp@2025"));
             admin.setMustChangePassword(false);
-            admin.setActif(true);
-            utilisateurRepository.save(admin);
+            admin.setActive(true);
+            userRepository.save(admin);
             log.info("Seed: SUPER_ADMIN e.fotso@mintp.cm / Mintp@2025");
         }
     }
 
-    private void seedOrganisationIfMissing(String code, String nom, OrganisationType type, Organisation parent) {
-        if (organisationRepository.findByCode(code).isEmpty()) {
-            Organisation org = new Organisation();
+    private void seedOrganizationIfMissing(String code, String name, OrganizationType type, Organization parent) {
+        if (organizationRepository.findByCode(code).isEmpty()) {
+            Organization org = new Organization();
             org.setCode(code);
-            org.setNom(nom);
+            org.setName(name);
             org.setType(type);
             org.setParent(parent);
-            org.setActif(true);
-            organisationRepository.save(org);
+            org.setActive(true);
+            organizationRepository.save(org);
         }
     }
 }

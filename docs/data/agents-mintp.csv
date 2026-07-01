@@ -1,23 +1,23 @@
 matricule;email;nom;prenom;telephone;role;organisation_code;service;fonction;actif
-MAT-2015-0001;jc.mvondo@mintp.cm;MVONDO;Jean-Claude;+237 677 10 20 01;CABINET;MINTP-CABINET;Cabinet du Ministre;Conseiller technique du Ministre;TRUE
-MAT-2012-0002;p.ngassa@mintp.cm;NGASSA;Paul;+237 677 10 20 02;SG;MINTP-SG;Secrétariat Général;Secrétaire Général du MINTP;TRUE
-MAT-2016-0003;m.abena@mintp.cm;ABENA;Marie;+237 677 10 20 03;APPUI;MINTP-SG;Secrétariat Général;Secrétaire de direction;TRUE
-MAT-2018-0004;f.tchinda@mintp.cm;TCHINDA;François;+237 677 10 20 04;APPUI;MINTP-SG;Secrétariat Général;Assistant administratif;TRUE
+MAT-2015-0001;jc.mvondo@mintp.cm;MVONDO;Jean-Claude;+237 677 10 20 01;EXECUTIVE_OFFICE;MINTP-CABINET;Cabinet du Ministre;Conseiller technique du Ministre;TRUE
+MAT-2012-0002;p.ngassa@mintp.cm;NGASSA;Paul;+237 677 10 20 02;SECRETARY_GENERAL;MINTP-SG;Secrétariat Général;Secrétaire Général du MINTP;TRUE
+MAT-2016-0003;m.abena@mintp.cm;ABENA;Marie;+237 677 10 20 03;SUPPORT;MINTP-SG;Secrétariat Général;Secrétaire de direction;TRUE
+MAT-2018-0004;f.tchinda@mintp.cm;TCHINDA;François;+237 677 10 20 04;SUPPORT;MINTP-SG;Secrétariat Général;Assistant administratif;TRUE
 MAT-2019-0005;g.bekomo@mintp.cm;BEKOMO;Grace;+237 677 10 20 05;AGENT;MINTP-CABINET;Cabinet du Ministre;Chargée de mission;TRUE
 MAT-2014-0006;e.fotso@mintp.cm;FOTSO;Emmanuel;+237 677 20 10 01;SUPER_ADMIN;DSI;Direction des Systèmes d'Information;Administrateur système;TRUE
 MAT-2013-0007;p.nguemo@mintp.cm;NGUEMO;Patrice;+237 677 20 10 02;SUPER_ADMIN;DSI;Direction des Systèmes d'Information;Ingénieur infrastructure;TRUE
-MAT-2017-0008;c.essomba@mintp.cm;ESSOMBA;Claude;+237 677 20 10 03;ADMIN_METIER;DSI;Direction des Systèmes d'Information;Référent applicatif FluxPro;TRUE
+MAT-2017-0008;c.essomba@mintp.cm;ESSOMBA;Claude;+237 677 20 10 03;BUSINESS_ADMIN;DSI;Direction des Systèmes d'Information;Référent applicatif FluxPro;TRUE
 MAT-2020-0009;s.mbiya@mintp.cm;MBIYA;Sandra;+237 677 20 10 04;AGENT;DSI;Direction des Systèmes d'Information;Technicienne support utilisateurs;TRUE
-MAT-2016-0010;m.ondoa@mintp.cm;ONDOA;Martin;+237 677 20 10 05;LECTEUR;DSI;Direction des Systèmes d'Information;Contrôleur audit SI;TRUE
-MAT-2010-0011;h.fouda@mintp.cm;FOUDA;Hamadou;+237 677 30 10 01;DIRECTEUR;DAG;Direction des Affaires Générales;Directeur des Affaires Générales;TRUE
-MAT-2015-0012;e.ngono@mintp.cm;NGONO;Estelle;+237 677 30 10 02;ADMIN_METIER;DAG-COURRIER;Service Courrier;Référent courrier — Administrateur métier;TRUE
-MAT-2012-0013;a.mvogo@mintp.cm;MVOGO;Alain;+237 677 30 10 03;CHEF_SERVICE;DAG-COURRIER;Service Courrier;Chef du Service Courrier;TRUE
-MAT-2014-0014;p.njie@mintp.cm;NJIE;Patrick;+237 677 30 10 04;CHEF_SERVICE;DAG-ARCHIVES;Service Archives;Chef du Service Archives;TRUE
-MAT-2016-0015;s.eboue@mintp.cm;EBOUE;Sylvie;+237 677 30 10 05;CHEF_SERVICE;DAG;Sous-direction Administration;Chef de la Sous-direction Administration;TRUE
-MAT-2018-0016;r.tchakoute@mintp.cm;TCHAKOUTE;René;+237 677 30 11 01;APPUI;DAG-COURRIER;Service Courrier;Cadre d'appui — Réception courrier;TRUE
-MAT-2019-0017;c.abanda@mintp.cm;ABANDA;Chantal;+237 677 30 11 02;APPUI;DAG-COURRIER;Service Courrier;Cadre d'appui — Registre courrier;TRUE
-MAT-2017-0018;j.mengue@mintp.cm;MENGUE;Joseph;+237 677 30 11 03;APPUI;DAG-COURRIER;Service Courrier;Archiviste courrier entrant;TRUE
-MAT-2020-0019;b.nkeng@mintp.cm;NKENG;Brigitte;+237 677 30 11 04;APPUI;DAG-ARCHIVES;Service Archives;Archiviste documentaire;TRUE
+MAT-2016-0010;m.ondoa@mintp.cm;ONDOA;Martin;+237 677 20 10 05;READER;DSI;Direction des Systèmes d'Information;Contrôleur audit SI;TRUE
+MAT-2010-0011;h.fouda@mintp.cm;FOUDA;Hamadou;+237 677 30 10 01;DIRECTOR;DAG;Direction des Affaires Générales;Directeur des Affaires Générales;TRUE
+MAT-2015-0012;e.ngono@mintp.cm;NGONO;Estelle;+237 677 30 10 02;BUSINESS_ADMIN;DAG-COURRIER;Service Courrier;Référent courrier — Administrateur métier;TRUE
+MAT-2012-0013;a.mvogo@mintp.cm;MVOGO;Alain;+237 677 30 10 03;SERVICE_HEAD;DAG-COURRIER;Service Courrier;Chef du Service Courrier;TRUE
+MAT-2014-0014;p.njie@mintp.cm;NJIE;Patrick;+237 677 30 10 04;SERVICE_HEAD;DAG-ARCHIVES;Service Archives;Chef du Service Archives;TRUE
+MAT-2016-0015;s.eboue@mintp.cm;EBOUE;Sylvie;+237 677 30 10 05;SERVICE_HEAD;DAG;Sous-direction Administration;Chef de la Sous-direction Administration;TRUE
+MAT-2018-0016;r.tchakoute@mintp.cm;TCHAKOUTE;René;+237 677 30 11 01;SUPPORT;DAG-COURRIER;Service Courrier;Cadre d'appui — Réception courrier;TRUE
+MAT-2019-0017;c.abanda@mintp.cm;ABANDA;Chantal;+237 677 30 11 02;SUPPORT;DAG-COURRIER;Service Courrier;Cadre d'appui — Registre courrier;TRUE
+MAT-2017-0018;j.mengue@mintp.cm;MENGUE;Joseph;+237 677 30 11 03;SUPPORT;DAG-COURRIER;Service Courrier;Archiviste courrier entrant;TRUE
+MAT-2020-0019;b.nkeng@mintp.cm;NKENG;Brigitte;+237 677 30 11 04;SUPPORT;DAG-ARCHIVES;Service Archives;Archiviste documentaire;TRUE
 MAT-2018-0020;d.atangana@mintp.cm;ATANGANA;Didier;+237 677 30 12 01;AGENT;DAG-COURRIER;Service Courrier;Agent de traitement courrier;TRUE
 MAT-2019-0021;a.bell@mintp.cm;BELL;Augustin;+237 677 30 12 02;AGENT;DAG-COURRIER;Service Courrier;Agent de traitement courrier;TRUE
 MAT-2020-0022;y.djoukam@mintp.cm;DJOUKAM;Yvette;+237 677 30 12 03;AGENT;DAG-COURRIER;Service Courrier;Agent de traitement courrier;TRUE
@@ -32,16 +32,16 @@ MAT-2017-0030;r.wandji@mintp.cm;WANDJI;Rosine;+237 677 30 12 11;AGENT;DAG-ARCHIV
 MAT-2018-0031;d.yembe@mintp.cm;YEMBE;David;+237 677 30 12 12;AGENT;DAG-ARCHIVES;Service Archives;Agent de conservation documentaire;TRUE
 MAT-2019-0032;m.zang@mintp.cm;ZANG;Michelle;+237 677 30 12 13;AGENT;DAG;Sous-direction Administration;Agent administratif;TRUE
 MAT-2020-0033;e.biye@mintp.cm;BIYE;Ernest;+237 677 30 12 14;AGENT;DAG;Sous-direction Administration;Agent de gestion du parc automobile;TRUE
-MAT-2015-0034;j.mbock@mintp.cm;MBOCK;Jean;+237 677 30 13 01;LECTEUR;DAG;Direction des Affaires Générales;Contrôleur interne — lecture seule;TRUE
-MAT-2016-0035;c.nguini@mintp.cm;NGUINI;Claire;+237 677 30 13 02;LECTEUR;DAG;Direction des Affaires Générales;Inspecteur — consultation rapports;TRUE
-MAT-2011-0036;t.owona@mintp.cm;OWONA;Thierry;+237 677 40 10 01;DIRECTEUR;DIER;Direction des Investissements et de l'Entretien Routier;Directeur DIER;TRUE
-MAT-2013-0037;v.kamga@mintp.cm;KAMGA;Véronique;+237 677 40 10 02;CHEF_SERVICE;DIER-MARCHES;Service Marchés Publics;Chef du Service Marchés Publics;TRUE
-MAT-2014-0038;p.dang@mintp.cm;DANG;Philippe;+237 677 40 10 03;CHEF_SERVICE;DIER-TECH;Division Technique;Chef de la Division Technique;TRUE
-MAT-2015-0039;i.moukouri@mintp.cm;MOUKOURI;Irène;+237 677 40 10 04;CHEF_SERVICE;DIER-BUDGET;Sous-direction Budget;Chef de la Sous-direction Budget;TRUE
-MAT-2016-0040;r.nana@mintp.cm;NANA;Roger;+237 677 40 10 05;CHEF_SERVICE;DIER-PROG;Division Programmation;Chef de la Division Programmation;TRUE
-MAT-2018-0041;b.chia@mintp.cm;CHIA;Bernadette;+237 677 40 11 01;APPUI;DIER-MARCHES;Service Marchés Publics;Secrétaire du Service Marchés;TRUE
-MAT-2017-0042;m.djeuga@mintp.cm;DJEUGA;Maurice;+237 677 40 11 02;APPUI;DIER;Direction DIER;Secrétaire de direction;TRUE
-MAT-2019-0043;c.ella@mintp.cm;ELLA;Colette;+237 677 40 11 03;APPUI;DIER-MARCHES;Service Marchés Publics;Archiviste dossiers marchés;TRUE
+MAT-2015-0034;j.mbock@mintp.cm;MBOCK;Jean;+237 677 30 13 01;READER;DAG;Direction des Affaires Générales;Contrôleur interne — lecture seule;TRUE
+MAT-2016-0035;c.nguini@mintp.cm;NGUINI;Claire;+237 677 30 13 02;READER;DAG;Direction des Affaires Générales;Inspecteur — consultation rapports;TRUE
+MAT-2011-0036;t.owona@mintp.cm;OWONA;Thierry;+237 677 40 10 01;DIRECTOR;DIER;Direction des Investissements et de l'Entretien Routier;Directeur DIER;TRUE
+MAT-2013-0037;v.kamga@mintp.cm;KAMGA;Véronique;+237 677 40 10 02;SERVICE_HEAD;DIER-MARCHES;Service Marchés Publics;Chef du Service Marchés Publics;TRUE
+MAT-2014-0038;p.dang@mintp.cm;DANG;Philippe;+237 677 40 10 03;SERVICE_HEAD;DIER-TECH;Division Technique;Chef de la Division Technique;TRUE
+MAT-2015-0039;i.moukouri@mintp.cm;MOUKOURI;Irène;+237 677 40 10 04;SERVICE_HEAD;DIER-BUDGET;Sous-direction Budget;Chef de la Sous-direction Budget;TRUE
+MAT-2016-0040;r.nana@mintp.cm;NANA;Roger;+237 677 40 10 05;SERVICE_HEAD;DIER-PROG;Division Programmation;Chef de la Division Programmation;TRUE
+MAT-2018-0041;b.chia@mintp.cm;CHIA;Bernadette;+237 677 40 11 01;SUPPORT;DIER-MARCHES;Service Marchés Publics;Secrétaire du Service Marchés;TRUE
+MAT-2017-0042;m.djeuga@mintp.cm;DJEUGA;Maurice;+237 677 40 11 02;SUPPORT;DIER;Direction DIER;Secrétaire de direction;TRUE
+MAT-2019-0043;c.ella@mintp.cm;ELLA;Colette;+237 677 40 11 03;SUPPORT;DIER-MARCHES;Service Marchés Publics;Archiviste dossiers marchés;TRUE
 MAT-2018-0044;k.ahidjo@mintp.cm;AHIDJO;Karim;+237 677 40 12 01;AGENT;DIER-MARCHES;Service Marchés Publics;Agent instruction dossiers marchés;TRUE
 MAT-2019-0045;l.bapoo@mintp.cm;BAPOO;Lionel;+237 677 40 12 02;AGENT;DIER-MARCHES;Service Marchés Publics;Agent passation marchés simplifiés;TRUE
 MAT-2020-0046;n.djeukam@mintp.cm;DJEUKAM;Nadine;+237 677 40 12 03;AGENT;DIER-MARCHES;Service Marchés Publics;Agent suivi consultations;TRUE
@@ -62,15 +62,15 @@ MAT-2020-0060;a.soh@mintp.cm;SOH;Angèle;+237 677 40 12 17;AGENT;DIER-MARCHES;Se
 MAT-2021-0061;j.tamba@mintp.cm;TAMBA;Justin;+237 677 40 12 18;AGENT;DIER-PROG;Division Programmation;Agent coordination projets;TRUE
 MAT-2018-0062;p.unjoh@mintp.cm;UNJOH;Prisca;+237 677 40 12 19;AGENT;DIER-TECH;Division Technique;Agent études préliminaires;TRUE
 MAT-2019-0063;a.voa@mintp.cm;VOA;Alain;+237 677 40 12 20;AGENT;DIER-MARCHES;Service Marchés Publics;Agent relance fournisseurs;TRUE
-MAT-2015-0064;m.affane@mintp.cm;AFFANE;Michel;+237 677 40 13 01;LECTEUR;DIER;Direction DIER;Contrôleur financier — lecture seule;TRUE
-MAT-2016-0065;j.bityo@mintp.cm;BITYO;Jeanne;+237 677 40 13 02;LECTEUR;DIER;Direction DIER;Auditrice interne — consultation;TRUE
-MAT-2012-0066;a.mezode@mintp.cm;MEZODE;André;+237 677 50 10 01;DRTP;DRTP-C;DRTP du Centre;Directeur DRTP Centre;TRUE
-MAT-2014-0067;c.tabi@mintp.cm;TABI;Cécile;+237 677 50 10 02;CHEF_SERVICE;DRTP-C-AUTH;Service Autorisations travaux;Chef du Service Autorisations;TRUE
-MAT-2015-0068;s.nguimfack@mintp.cm;NGUIMFACK;Simon;+237 677 50 10 03;CHEF_SERVICE;DRTP-C-ROUTES;Service Routes nationales;Chef du Service Routes;TRUE
-MAT-2016-0069;p.eyene@mintp.cm;EYENE;Pauline;+237 677 50 10 04;CHEF_SERVICE;DRTP-C;DRTP du Centre;Chef du Service Administration;TRUE
-MAT-2018-0070;a.nkono@mintp.cm;NKONO;Angèle;+237 677 50 11 01;APPUI;DRTP-C-AUTH;Service Autorisations travaux;Secrétaire autorisations;TRUE
-MAT-2017-0071;b.tchoua@mintp.cm;TCHOUA;Benoît;+237 677 50 11 02;APPUI;DRTP-C;DRTP du Centre;Secrétaire de direction DRTP;TRUE
-MAT-2019-0072;d.wouafo@mintp.cm;WOUAFO;Diane;+237 677 50 11 03;APPUI;DRTP-C-ROUTES;Service Routes nationales;Archiviste technique DRTP;TRUE
+MAT-2015-0064;m.affane@mintp.cm;AFFANE;Michel;+237 677 40 13 01;READER;DIER;Direction DIER;Contrôleur financier — lecture seule;TRUE
+MAT-2016-0065;j.bityo@mintp.cm;BITYO;Jeanne;+237 677 40 13 02;READER;DIER;Direction DIER;Auditrice interne — consultation;TRUE
+MAT-2012-0066;a.mezode@mintp.cm;MEZODE;André;+237 677 50 10 01;REGIONAL_DIRECTOR;DRTP-C;DRTP du Centre;Directeur DRTP Centre;TRUE
+MAT-2014-0067;c.tabi@mintp.cm;TABI;Cécile;+237 677 50 10 02;SERVICE_HEAD;DRTP-C-AUTH;Service Autorisations travaux;Chef du Service Autorisations;TRUE
+MAT-2015-0068;s.nguimfack@mintp.cm;NGUIMFACK;Simon;+237 677 50 10 03;SERVICE_HEAD;DRTP-C-ROUTES;Service Routes nationales;Chef du Service Routes;TRUE
+MAT-2016-0069;p.eyene@mintp.cm;EYENE;Pauline;+237 677 50 10 04;SERVICE_HEAD;DRTP-C;DRTP du Centre;Chef du Service Administration;TRUE
+MAT-2018-0070;a.nkono@mintp.cm;NKONO;Angèle;+237 677 50 11 01;SUPPORT;DRTP-C-AUTH;Service Autorisations travaux;Secrétaire autorisations;TRUE
+MAT-2017-0071;b.tchoua@mintp.cm;TCHOUA;Benoît;+237 677 50 11 02;SUPPORT;DRTP-C;DRTP du Centre;Secrétaire de direction DRTP;TRUE
+MAT-2019-0072;d.wouafo@mintp.cm;WOUAFO;Diane;+237 677 50 11 03;SUPPORT;DRTP-C-ROUTES;Service Routes nationales;Archiviste technique DRTP;TRUE
 MAT-2018-0073;s.adjomo@mintp.cm;ADJOMO;Serge;+237 677 50 12 01;AGENT;DRTP-C-AUTH;Service Autorisations travaux;Agent instruction autorisations;TRUE
 MAT-2019-0074;m.bilong@mintp.cm;BILONG;Martine;+237 677 50 12 02;AGENT;DRTP-C-AUTH;Service Autorisations travaux;Agent réception demandes travaux;TRUE
 MAT-2020-0075;p.ebong@mintp.cm;EBONG;Pascal;+237 677 50 12 03;AGENT;DRTP-C-AUTH;Service Autorisations travaux;Agent visite terrain;TRUE
@@ -83,4 +83,4 @@ MAT-2019-0081;r.mevo@mintp.cm;MEVO;Robert;+237 677 50 12 09;AGENT;DRTP-C-AUTH;Se
 MAT-2020-0082;j.ndoum@mintp.cm;NDOUM;Julienne;+237 677 50 12 10;AGENT;DRTP-C;DRTP du Centre;Agent coordination Mfoundi-Lekié;TRUE
 MAT-2018-0083;s.obam@mintp.cm;OBAM;Serge;+237 677 50 12 11;AGENT;DRTP-C-AUTH;Service Autorisations travaux;Agent relation entreprises;TRUE
 MAT-2019-0084;v.pokam@mintp.cm;POKAM;Vincent;+237 677 50 12 12;AGENT;DRTP-C-ROUTES;Service Routes nationales;Agent inspection ponts et ouvrages;TRUE
-MAT-2016-0085;l.mongue@mintp.cm;MONGUE;Lambert;+237 677 50 13 01;LECTEUR;DRTP-C;DRTP du Centre;Contrôleur régional — consultation;TRUE
+MAT-2016-0085;l.mongue@mintp.cm;MONGUE;Lambert;+237 677 50 13 01;READER;DRTP-C;DRTP du Centre;Contrôleur régional — consultation;TRUE
