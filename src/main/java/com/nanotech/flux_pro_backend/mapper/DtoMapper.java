@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.mapper;
 
+import com.nanotech.flux_pro_backend.dto.response.OrganizationDetailResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationSummaryResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationTreeResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationTypeResponse;
@@ -36,6 +37,21 @@ public final class DtoMapper {
 
     public static OrganizationSummaryResponse toSummary(Organization org) {
         return new OrganizationSummaryResponse(org.getId(), org.getCode(), org.getName());
+    }
+
+    public static OrganizationDetailResponse toDetail(Organization org) {
+        Organization parent = org.getParent();
+        OrganizationType type = org.getOrganizationType();
+        return new OrganizationDetailResponse(
+                org.getId(),
+                org.getCode(),
+                org.getName(),
+                type.getId(),
+                type.getCode(),
+                type.getName(),
+                parent != null ? parent.getId() : null,
+                parent != null ? parent.getCode() : null,
+                org.isActive());
     }
 
     public static UserProfileResponse toProfile(User user) {

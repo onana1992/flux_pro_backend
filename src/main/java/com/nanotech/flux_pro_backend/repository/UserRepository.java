@@ -50,4 +50,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("role") UserRole role,
             @Param("search") String search,
             Pageable pageable);
+
+    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.organization.id = :organizationId")
+    boolean existsByOrganizationId(@Param("organizationId") UUID organizationId);
 }

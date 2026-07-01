@@ -2,6 +2,7 @@ package com.nanotech.flux_pro_backend.controller;
 
 import com.nanotech.flux_pro_backend.common.ImportResult;
 import com.nanotech.flux_pro_backend.dto.request.OrganizationRequest;
+import com.nanotech.flux_pro_backend.dto.response.OrganizationDetailResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationSummaryResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationTreeResponse;
 import com.nanotech.flux_pro_backend.mapper.DtoMapper;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,8 +46,8 @@ public class OrganizationController {
     }
 
     @GetMapping("/{id}")
-    public OrganizationSummaryResponse getById(@PathVariable UUID id) {
-        return DtoMapper.toSummary(organizationService.getById(id, securityUtils.currentUser()));
+    public OrganizationDetailResponse getById(@PathVariable UUID id) {
+        return organizationService.getDetailById(id, securityUtils.currentUser());
     }
 
     @PostMapping
@@ -65,6 +67,13 @@ public class OrganizationController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
     public OrganizationSummaryResponse deactivate(@PathVariable UUID id) {
         return DtoMapper.toSummary(organizationService.deactivate(id));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) {
+        organizationService.delete(id);
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

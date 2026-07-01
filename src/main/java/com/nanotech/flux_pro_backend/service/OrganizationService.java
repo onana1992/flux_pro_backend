@@ -1,12 +1,14 @@
 package com.nanotech.flux_pro_backend.service;
 
 import com.nanotech.flux_pro_backend.dto.request.OrganizationRequest;
+import com.nanotech.flux_pro_backend.dto.response.OrganizationDetailResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationTreeResponse;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.mapper.DtoMapper;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
+import com.nanotech.flux_pro_backend.repository.UserRepository;
 import com.nanotech.flux_pro_backend.security.OrganizationScopeService;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
 import lombok.RequiredArgsConstructor;
@@ -24,11 +26,20 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationTypeService organizationTypeService;
     private final OrganizationScopeService organizationScopeService;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public List<OrganizationTreeResponse> getTree(SecurityUser user) {
-        List<Organization> all = organizationRepository.findAllActive();
+        boolean fullTree = user.getRole() == UserRole.SUPER_ADMIN
+                || user.getRole() == UserRole.BUSINESS_ADMIN
+                || user.getRole() == UserRole.SECRETARY_GENERAL
+                || user.getRole() == UserRole.EXECUTIVE_OFFICE;
+        List<Organization> all = fullTree && (user.getRole() == UserRole.SUPER_ADMIN
+                || user.getRole() == UserRole.BUSINESS_ADMIN)
+                ? organizationRepository.findAll()
+                : organizationRepository.findAllActive();
         if (user.getRole() == UserRole.SUPER_ADMIN
+                || user.getRole() == UserRole.BUSINESS_ADMIN
                 || user.getRole() == UserRole.SECRETARY_GENERAL
                 || user.getRole() == UserRole.EXECUTIVE_OFFICE) {
             return DtoMapper.buildTree(all);
@@ -44,12 +55,17 @@ public class OrganizationService {
 
     @Transactional(readOnly = true)
     public Organization getById(UUID id, SecurityUser user) {
-        Organization org = organizationRepository.findById(id)
+        Organization org = organizationRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
         if (!organizationScopeService.canAccess(user, id)) {
             throw new AccessDeniedException("Access denied to this organization");
         }
         return org;
+    }
+
+    @Transactional(readOnly = true)
+    public OrganizationDetailResponse getDetailById(UUID id, SecurityUser user) {
+        return DtoMapper.toDetail(getById(id, user));
     }
 
     @Transactional
@@ -79,6 +95,19 @@ public class OrganizationService {
                 .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
         org.setActive(false);
         return organizationRepository.save(org);
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        Organization org = organizationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+        if (organizationRepository.existsByParentId(id)) {
+            throw new IllegalArgumentException("Cannot delete organization with child entities");
+        }
+        if (userRepository.existsByOrganizationId(id)) {
+            throw new IllegalArgumentException("Cannot delete organization with assigned users");
+        }
+        organizationRepository.delete(org);
     }
 
     private void applyRequest(Organization org, OrganizationRequest request) {

@@ -23,6 +23,7 @@ public class OrganizationScopeService {
 
     public boolean hasGlobalScope(SecurityUser user) {
         return user.getRole() == UserRole.SUPER_ADMIN
+                || user.getRole() == UserRole.BUSINESS_ADMIN
                 || user.getRole() == UserRole.SECRETARY_GENERAL
                 || user.getRole() == UserRole.EXECUTIVE_OFFICE;
     }
