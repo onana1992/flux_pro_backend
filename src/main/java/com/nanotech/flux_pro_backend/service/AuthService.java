@@ -10,6 +10,7 @@ import com.nanotech.flux_pro_backend.repository.UserRepository;
 import com.nanotech.flux_pro_backend.security.AccountInactiveException;
 import com.nanotech.flux_pro_backend.security.JwtTokenProvider;
 import com.nanotech.flux_pro_backend.security.PasswordValidator;
+import com.nanotech.flux_pro_backend.security.RbacAuthorityService;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class AuthService {
     private final LoginAuditService loginAuditService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RbacAuthorityService rbacAuthorityService;
 
     @Transactional
     public TokenResponse login(String email, String password, HttpServletRequest request) {
@@ -129,17 +131,19 @@ public class AuthService {
     }
 
     private TokenResponse buildTokenResponse(User user) {
-        SecurityUser securityUser = new SecurityUser(user);
+        User loaded = userRepository.findByIdWithRolesAndOrganization(user.getId()).orElse(user);
+        RbacAuthorityService.RbacAuthorities authorities = rbacAuthorityService.resolve(loaded);
+        SecurityUser securityUser = new SecurityUser(loaded, authorities);
         String accessToken = jwtTokenProvider.createAccessToken(securityUser);
         String refreshValue = jwtTokenProvider.createRefreshTokenValue();
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setToken(refreshValue);
-        refreshToken.setUser(user);
+        refreshToken.setUser(loaded);
         refreshToken.setExpiresAt(Instant.now().plusMillis(jwtTokenProvider.getRefreshExpirationMs()));
         refreshTokenRepository.save(refreshToken);
 
-        UserProfileResponse profile = DtoMapper.toProfile(user);
+        UserProfileResponse profile = DtoMapper.toProfile(loaded, authorities);
         return new TokenResponse(
                 accessToken,
                 refreshValue,

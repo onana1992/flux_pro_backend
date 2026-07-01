@@ -7,7 +7,8 @@ import com.nanotech.flux_pro_backend.service.OrganizationTypeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.nanotech.flux_pro_backend.security.RbacPermissions;
+import com.nanotech.flux_pro_backend.security.RequiresPermission;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -35,7 +36,7 @@ public class OrganizationTypeController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATION_TYPES_READ)
     public List<OrganizationTypeResponse> listAll() {
         return organizationTypeService.listAll().stream().map(DtoMapper::toTypeResponse).toList();
     }
@@ -46,26 +47,26 @@ public class OrganizationTypeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATION_TYPES_CREATE)
     @ResponseStatus(HttpStatus.CREATED)
     public OrganizationTypeResponse create(@Valid @RequestBody OrganizationTypeRequest request) {
         return DtoMapper.toTypeResponse(organizationTypeService.create(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATION_TYPES_UPDATE)
     public OrganizationTypeResponse update(@PathVariable UUID id, @Valid @RequestBody OrganizationTypeRequest request) {
         return DtoMapper.toTypeResponse(organizationTypeService.update(id, request));
     }
 
     @PatchMapping("/{id}/deactivate")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATION_TYPES_UPDATE)
     public OrganizationTypeResponse deactivate(@PathVariable UUID id) {
         return DtoMapper.toTypeResponse(organizationTypeService.deactivate(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATION_TYPES_DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
         organizationTypeService.delete(id);

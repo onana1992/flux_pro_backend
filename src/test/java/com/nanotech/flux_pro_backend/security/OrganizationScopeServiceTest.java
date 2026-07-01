@@ -115,6 +115,6 @@ class OrganizationScopeServiceTest {
         user.setFirstName("User");
         user.setActive(true);
         user.setMustChangePassword(false);
-        return new SecurityUser(user);
+        return new SecurityUser(user, new RbacAuthorityService.RbacAuthorities(List.of(role.name()), List.of()));
     }
 }

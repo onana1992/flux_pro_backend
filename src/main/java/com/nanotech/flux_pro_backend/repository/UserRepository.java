@@ -23,6 +23,22 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     Optional<User> findByEmailWithOrganization(@Param("email") String email);
 
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            JOIN FETCH u.organization
+            LEFT JOIN FETCH u.roles
+            WHERE LOWER(u.email) = LOWER(:email)
+            """)
+    Optional<User> findByEmailWithRolesAndOrganization(@Param("email") String email);
+
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            JOIN FETCH u.organization
+            LEFT JOIN FETCH u.roles
+            WHERE u.id = :id
+            """)
+    Optional<User> findByIdWithRolesAndOrganization(@Param("id") UUID id);
+
     Optional<User> findByStaffNumber(String staffNumber);
 
     @Query("""

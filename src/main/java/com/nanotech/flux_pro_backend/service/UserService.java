@@ -16,6 +16,7 @@ import com.nanotech.flux_pro_backend.repository.UserRepository;
 import com.nanotech.flux_pro_backend.security.AccessControlService;
 import com.nanotech.flux_pro_backend.security.OrganizationScopeService;
 import com.nanotech.flux_pro_backend.security.PasswordValidator;
+import com.nanotech.flux_pro_backend.security.RbacAuthorityService;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -44,6 +45,8 @@ public class UserService {
     private final OrganizationRepository organizationRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AccessControlService accessControlService;
+    private final RoleService roleService;
+    private final RbacAuthorityService rbacAuthorityService;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
@@ -78,7 +81,9 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserProfileResponse getMeProfile(SecurityUser user) {
-        return DtoMapper.toProfile(findOrThrow(user.getId()));
+        User entity = userRepository.findByIdWithRolesAndOrganization(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return DtoMapper.toProfile(entity, rbacAuthorityService.resolve(entity));
     }
 
     @Transactional(readOnly = true)
@@ -95,13 +100,15 @@ public class UserService {
         Organization org = organizationRepository.findById(request.organizationId())
                 .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
 
-        String tempPassword = generateTemporaryPassword();
+        String tempPassword = resolveTemporaryPassword(request.temporaryPassword());
         PasswordValidator.validate(tempPassword);
 
         User user = new User();
         applyRequest(user, request, org);
         user.setPasswordHash(passwordEncoder.encode(tempPassword));
         user.setMustChangePassword(true);
+        userRepository.save(user);
+        roleService.syncPrimaryRole(user);
         userRepository.save(user);
         return new CreateUserResult(DtoMapper.toResponse(user), tempPassword);
     }
@@ -114,6 +121,7 @@ public class UserService {
         Organization org = organizationRepository.findById(request.organizationId())
                 .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
         applyRequest(user, request, org);
+        roleService.syncPrimaryRole(user);
         return DtoMapper.toResponse(userRepository.save(user));
     }
 
@@ -206,6 +214,8 @@ public class UserService {
                     updated++;
                 }
                 userRepository.save(user);
+                roleService.syncPrimaryRole(user);
+                userRepository.save(user);
             } catch (Exception e) {
                 errors.add("Line " + line + ": " + e.getMessage());
             }
@@ -220,6 +230,11 @@ public class UserService {
             return Set.of();
         }
         return scope.organizationIds();
+    }
+
+    @Transactional(readOnly = true)
+    public void assertCanManageUser(SecurityUser actor, UUID userId) {
+        accessControlService.assertCanManageUser(actor, findOrThrowWithOrg(userId));
     }
 
     private void applyRequest(User user, UserRequest request, Organization org) {
@@ -255,6 +270,13 @@ public class UserService {
     private User findOrThrowWithOrg(UUID id) {
         return userRepository.findByIdWithOrganization(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+    private String resolveTemporaryPassword(String provided) {
+        if (provided != null && !provided.isBlank()) {
+            return provided.trim();
+        }
+        return generateTemporaryPassword();
     }
 
     private String generateTemporaryPassword() {

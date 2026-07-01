@@ -13,12 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final RbacAuthorityService rbacAuthorityService;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findByEmailWithOrganization(username.toLowerCase().trim())
-                .map(SecurityUser::new)
+        return userRepository.findByEmailWithRolesAndOrganization(username.toLowerCase().trim())
+                .map(user -> new SecurityUser(user, rbacAuthorityService.resolve(user)))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }

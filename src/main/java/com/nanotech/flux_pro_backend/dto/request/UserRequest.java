@@ -16,6 +16,7 @@ public record UserRequest(
         @NotNull UserRole role,
         @NotNull UUID organizationId,
         String jobTitle,
-        boolean active
+        boolean active,
+        String temporaryPassword
 ) {
 }

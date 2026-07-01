@@ -2,6 +2,7 @@ package com.nanotech.flux_pro_backend.dto.response;
 
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 
+import java.util.List;
 import java.util.UUID;
 
 public record UserResponse(
@@ -15,6 +16,6 @@ public record UserResponse(
         OrganizationSummaryResponse organization,
         String jobTitle,
         boolean active,
-        boolean mustChangePassword
-) {
+        boolean mustChangePassword,
+        List<RoleSummaryResponse> roles) {
 }

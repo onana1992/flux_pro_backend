@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import com.nanotech.flux_pro_backend.security.RbacPermissions;
+import com.nanotech.flux_pro_backend.security.RequiresPermission;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,33 +53,33 @@ public class OrganizationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATIONS_CREATE)
     @ResponseStatus(HttpStatus.CREATED)
     public OrganizationSummaryResponse create(@Valid @RequestBody OrganizationRequest request) {
         return DtoMapper.toSummary(organizationService.create(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATIONS_UPDATE)
     public OrganizationSummaryResponse update(@PathVariable UUID id, @Valid @RequestBody OrganizationRequest request) {
         return DtoMapper.toSummary(organizationService.update(id, request));
     }
 
     @PatchMapping("/{id}/deactivate")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATIONS_UPDATE)
     public OrganizationSummaryResponse deactivate(@PathVariable UUID id) {
         return DtoMapper.toSummary(organizationService.deactivate(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATIONS_DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
         organizationService.delete(id);
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @RequiresPermission(RbacPermissions.ORGANIZATIONS_IMPORT)
     public ImportResult importCsv(@RequestParam("file") MultipartFile file) throws IOException {
         return organizationImportService.importCsv(file);
     }
