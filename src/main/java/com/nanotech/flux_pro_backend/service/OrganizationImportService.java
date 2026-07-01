@@ -3,8 +3,9 @@ package com.nanotech.flux_pro_backend.service;
 import com.nanotech.flux_pro_backend.common.CsvUtils;
 import com.nanotech.flux_pro_backend.common.ImportResult;
 import com.nanotech.flux_pro_backend.entity.Organization;
-import com.nanotech.flux_pro_backend.enumeration.OrganizationType;
+import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
+import com.nanotech.flux_pro_backend.repository.OrganizationTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class OrganizationImportService {
 
     private final OrganizationRepository organizationRepository;
+    private final OrganizationTypeRepository organizationTypeRepository;
 
     @Transactional
     public ImportResult importCsv(MultipartFile file) throws IOException {
@@ -32,6 +34,9 @@ public class OrganizationImportService {
         Map<String, Organization> cache = new HashMap<>();
         organizationRepository.findAll().forEach(o -> cache.put(o.getCode(), o));
 
+        Map<String, OrganizationType> typeCache = new HashMap<>();
+        organizationTypeRepository.findAll().forEach(t -> typeCache.put(t.getCode(), t));
+
         for (int i = 0; i < rows.size(); i++) {
             Map<String, String> row = rows.get(i);
             int line = i + 2;
@@ -41,6 +46,25 @@ public class OrganizationImportService {
                     errors.add("Line " + line + ": missing code");
                     continue;
                 }
+                String typeCode = row.get("type");
+                if (typeCode == null || typeCode.isBlank()) {
+                    errors.add("Line " + line + ": missing type");
+                    continue;
+                }
+                OrganizationType orgType = typeCache.get(typeCode);
+                if (orgType == null) {
+                    orgType = organizationTypeRepository.findByCode(typeCode).orElse(null);
+                }
+                if (orgType == null) {
+                    errors.add("Line " + line + ": unknown type " + typeCode);
+                    continue;
+                }
+                if (!orgType.isActive()) {
+                    errors.add("Line " + line + ": inactive type " + typeCode);
+                    continue;
+                }
+                typeCache.put(typeCode, orgType);
+
                 Organization org = cache.get(code);
                 boolean isNew = org == null;
                 if (isNew) {
@@ -48,7 +72,7 @@ public class OrganizationImportService {
                     org.setCode(code);
                 }
                 org.setName(row.getOrDefault("nom", code));
-                org.setType(OrganizationType.valueOf(row.get("type")));
+                org.setOrganizationType(orgType);
                 org.setActive(Boolean.parseBoolean(row.getOrDefault("actif", "true")));
 
                 String parentCode = row.get("parent_code");
@@ -63,6 +87,10 @@ public class OrganizationImportService {
                     }
                     org.setParent(parent);
                 } else {
+                    if (!orgType.isAllowsRoot()) {
+                        errors.add("Line " + line + ": type " + typeCode + " requires a parent");
+                        continue;
+                    }
                     org.setParent(null);
                 }
 

@@ -1,7 +1,6 @@
 package com.nanotech.flux_pro_backend.security;
 
 import com.nanotech.flux_pro_backend.entity.Organization;
-import com.nanotech.flux_pro_backend.enumeration.OrganizationType;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,13 +16,50 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrganizationScopeService {
 
+    public record ScopeFilter(boolean allOrganizations, Set<UUID> organizationIds) {
+    }
+
     private final OrganizationRepository organizationRepository;
+
+    public boolean hasGlobalScope(SecurityUser user) {
+        return user.getRole() == UserRole.SUPER_ADMIN
+                || user.getRole() == UserRole.SECRETARY_GENERAL
+                || user.getRole() == UserRole.EXECUTIVE_OFFICE;
+    }
+
+    @Transactional(readOnly = true)
+    public ScopeFilter resolveScopeFilter(SecurityUser user) {
+        if (hasGlobalScope(user)) {
+            return new ScopeFilter(true, Set.of());
+        }
+
+        Organization userOrg = organizationRepository.findById(user.getOrganizationId()).orElse(null);
+        if (userOrg == null) {
+            return new ScopeFilter(false, Set.of());
+        }
+
+        if (user.getRole() == UserRole.REGIONAL_DIRECTOR) {
+            String rootCode = findRegionalRootCode(userOrg);
+            if (rootCode == null) {
+                return new ScopeFilter(false, Set.of(userOrg.getId()));
+            }
+            Set<UUID> ids = new HashSet<>();
+            for (Organization org : organizationRepository.findAllActive()) {
+                if (rootCode.equals(findRegionalRootCode(org))) {
+                    ids.add(org.getId());
+                }
+            }
+            return new ScopeFilter(false, ids);
+        }
+
+        Set<UUID> scope = collectSubtree(userOrg.getId());
+        scope.add(userOrg.getId());
+        return new ScopeFilter(false, scope);
+    }
 
     @Transactional(readOnly = true)
     public boolean canAccess(SecurityUser user, UUID targetOrgId) {
-        if (user.getRole() == UserRole.SUPER_ADMIN
-                || user.getRole() == UserRole.SECRETARY_GENERAL
-                || user.getRole() == UserRole.EXECUTIVE_OFFICE) {
+        if (hasGlobalScope(user)) {
             return true;
         }
 
@@ -38,8 +74,8 @@ public class OrganizationScopeService {
         }
 
         if (user.getRole() == UserRole.REGIONAL_DIRECTOR) {
-            String userRoot = findDrtpRootCode(userOrg);
-            String targetRoot = findDrtpRootCode(target);
+            String userRoot = findRegionalRootCode(userOrg);
+            String targetRoot = findRegionalRootCode(target);
             return userRoot != null && userRoot.equals(targetRoot);
         }
 
@@ -53,10 +89,10 @@ public class OrganizationScopeService {
         return userAncestors.contains(target.getId()) || collectAncestors(target).contains(userOrg.getId());
     }
 
-    private String findDrtpRootCode(Organization org) {
+    private String findRegionalRootCode(Organization org) {
         Organization current = org;
         while (current != null) {
-            if (current.getType() == OrganizationType.REGIONAL_DIRECTORATE) {
+            if (current.getOrganizationType() != null && current.getOrganizationType().isRegionalScope()) {
                 return current.getCode();
             }
             current = current.getParent();

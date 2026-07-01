@@ -4,6 +4,7 @@ import com.nanotech.flux_pro_backend.dto.request.ChangePasswordRequest;
 import com.nanotech.flux_pro_backend.dto.request.LoginRequest;
 import com.nanotech.flux_pro_backend.dto.request.RefreshTokenRequest;
 import com.nanotech.flux_pro_backend.dto.response.TokenResponse;
+import com.nanotech.flux_pro_backend.dto.response.UserProfileResponse;
 import com.nanotech.flux_pro_backend.security.SecurityUtils;
 import com.nanotech.flux_pro_backend.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,7 +41,8 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        authService.changePassword(securityUtils.currentUser(), request.currentPassword(), request.newPassword());
+    public UserProfileResponse changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        return authService.changePassword(
+                securityUtils.currentUser(), request.currentPassword(), request.newPassword());
     }
 }

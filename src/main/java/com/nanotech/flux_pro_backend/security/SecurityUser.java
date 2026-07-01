@@ -1,17 +1,20 @@
 package com.nanotech.flux_pro_backend.security;
 
+import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
-import lombok.Getter;
+import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-@Getter
+@RequiredArgsConstructor
 public class SecurityUser implements UserDetails {
 
     private final UUID id;
@@ -21,6 +24,8 @@ public class SecurityUser implements UserDetails {
     private final UUID organizationId;
     private final String organizationCode;
     private final boolean active;
+    private final boolean mustChangePassword;
+    private final Instant lockedUntil;
 
     public SecurityUser(User user) {
         this.id = user.getId();
@@ -30,6 +35,32 @@ public class SecurityUser implements UserDetails {
         this.organizationId = user.getOrganization().getId();
         this.organizationCode = user.getOrganization().getCode();
         this.active = user.isActive();
+        this.mustChangePassword = user.isMustChangePassword();
+        this.lockedUntil = user.getLockedUntil();
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public String getOrganizationCode() {
+        return organizationCode;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
     }
 
     @Override
@@ -54,7 +85,10 @@ public class SecurityUser implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        if (lockedUntil == null) {
+            return true;
+        }
+        return lockedUntil.isBefore(Instant.now());
     }
 
     @Override

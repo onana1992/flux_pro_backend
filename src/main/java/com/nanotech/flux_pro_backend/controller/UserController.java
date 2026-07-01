@@ -46,26 +46,26 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN', 'DIRECTOR', 'SERVICE_HEAD', 'REGIONAL_DIRECTOR')")
     public Page<UserResponse> search(
             @RequestParam(required = false) UUID organizationId,
             @RequestParam(required = false) UserRole role,
             @RequestParam(required = false) String search,
             @PageableDefault(size = 20) Pageable pageable) {
-        return userService.search(organizationId, role, search, pageable);
+        return userService.search(securityUtils.currentUser(), organizationId, role, search, pageable);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN', 'DIRECTOR')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN', 'DIRECTOR', 'SERVICE_HEAD', 'REGIONAL_DIRECTOR')")
     public UserResponse getById(@PathVariable UUID id) {
-        return userService.getById(id);
+        return userService.getById(securityUtils.currentUser(), id);
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Object> create(@Valid @RequestBody UserRequest request) {
-        var result = userService.create(request);
+        var result = userService.create(securityUtils.currentUser(), request);
         return Map.of(
                 "user", result.user(),
                 "temporaryPassword", result.temporaryPassword());
@@ -74,24 +74,36 @@ public class UserController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
     public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UserRequest request) {
-        return userService.update(id, request);
+        return userService.update(securityUtils.currentUser(), id, request);
     }
 
     @PatchMapping("/{id}/deactivate")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
     public UserResponse deactivate(@PathVariable UUID id) {
-        return userService.deactivate(id);
+        return userService.deactivate(securityUtils.currentUser(), id);
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'BUSINESS_ADMIN')")
+    public UserResponse activate(@PathVariable UUID id) {
+        return userService.activate(securityUtils.currentUser(), id);
+    }
+
+    @PatchMapping("/{id}/unlock")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public UserResponse unlock(@PathVariable UUID id) {
+        return userService.unlock(securityUtils.currentUser(), id);
     }
 
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResetPasswordResponse resetPassword(@PathVariable UUID id) {
-        return userService.resetPassword(id);
+        return userService.resetPassword(securityUtils.currentUser(), id);
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ImportResult importCsv(@RequestParam("file") MultipartFile file) throws IOException {
-        return userService.importCsv(file);
+        return userService.importCsv(securityUtils.currentUser(), file);
     }
 }

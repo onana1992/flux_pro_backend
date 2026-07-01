@@ -2,9 +2,11 @@ package com.nanotech.flux_pro_backend.mapper;
 
 import com.nanotech.flux_pro_backend.dto.response.OrganizationSummaryResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationTreeResponse;
+import com.nanotech.flux_pro_backend.dto.response.OrganizationTypeResponse;
 import com.nanotech.flux_pro_backend.dto.response.UserProfileResponse;
 import com.nanotech.flux_pro_backend.dto.response.UserResponse;
 import com.nanotech.flux_pro_backend.entity.Organization;
+import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.entity.User;
 
 import java.util.Comparator;
@@ -16,6 +18,20 @@ import java.util.stream.Collectors;
 public final class DtoMapper {
 
     private DtoMapper() {
+    }
+
+    public static OrganizationTypeResponse toTypeResponse(OrganizationType type) {
+        return new OrganizationTypeResponse(
+                type.getId(),
+                type.getCode(),
+                type.getName(),
+                type.getNameEn(),
+                type.getDescription(),
+                type.getColor(),
+                type.getSortOrder(),
+                type.isAllowsRoot(),
+                type.isRegionalScope(),
+                type.isActive());
     }
 
     public static OrganizationSummaryResponse toSummary(Organization org) {
@@ -66,6 +82,11 @@ public final class DtoMapper {
                 .map(child -> toTreeNode(child, byParent))
                 .toList();
         return new OrganizationTreeResponse(
-                org.getId(), org.getCode(), org.getName(), org.getType(), org.isActive(), children);
+                org.getId(),
+                org.getCode(),
+                org.getName(),
+                toTypeResponse(org.getOrganizationType()),
+                org.isActive(),
+                children);
     }
 }

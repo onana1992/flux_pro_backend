@@ -11,12 +11,16 @@ import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.mapper.DtoMapper;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
+import com.nanotech.flux_pro_backend.repository.RefreshTokenRepository;
 import com.nanotech.flux_pro_backend.repository.UserRepository;
+import com.nanotech.flux_pro_backend.security.AccessControlService;
+import com.nanotech.flux_pro_backend.security.OrganizationScopeService;
 import com.nanotech.flux_pro_backend.security.PasswordValidator;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +31,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -37,11 +42,37 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final AccessControlService accessControlService;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public Page<UserResponse> search(UUID organizationId, UserRole role, String search, Pageable pageable) {
-        return userRepository.search(organizationId, role, search, pageable)
+    public Page<UserResponse> search(
+            SecurityUser actor,
+            UUID organizationId,
+            UserRole role,
+            String search,
+            Pageable pageable) {
+        if (!accessControlService.canReadUsers(actor)) {
+            throw new AccessDeniedException("Access denied");
+        }
+
+        OrganizationScopeService.ScopeFilter scope = accessControlService.resolveUserSearchScope(actor);
+        if (!scope.allOrganizations() && scope.organizationIds().isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        if (organizationId != null && !scope.allOrganizations() && !scope.organizationIds().contains(organizationId)) {
+            throw new AccessDeniedException("Access denied to this organization");
+        }
+
+        return userRepository.search(
+                        scope.allOrganizations(),
+                        scope.organizationIds(),
+                        organizationId,
+                        role,
+                        search,
+                        pageable)
                 .map(DtoMapper::toResponse);
     }
 
@@ -51,12 +82,15 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse getById(UUID id) {
-        return DtoMapper.toResponse(findOrThrow(id));
+    public UserResponse getById(SecurityUser actor, UUID id) {
+        User user = findOrThrowWithOrg(id);
+        accessControlService.assertCanReadUser(actor, user);
+        return DtoMapper.toResponse(user);
     }
 
     @Transactional
-    public CreateUserResult create(UserRequest request) {
+    public CreateUserResult create(SecurityUser actor, UserRequest request) {
+        accessControlService.assertCanWriteUser(actor, request, null);
         validateUnique(request.staffNumber(), request.email(), null);
         Organization org = organizationRepository.findById(request.organizationId())
                 .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
@@ -73,8 +107,9 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse update(UUID id, UserRequest request) {
-        User user = findOrThrow(id);
+    public UserResponse update(SecurityUser actor, UUID id, UserRequest request) {
+        User user = findOrThrowWithOrg(id);
+        accessControlService.assertCanWriteUser(actor, request, user);
         validateUnique(request.staffNumber(), request.email(), id);
         Organization org = organizationRepository.findById(request.organizationId())
                 .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
@@ -83,27 +118,57 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse deactivate(UUID id) {
-        User user = findOrThrow(id);
+    public UserResponse deactivate(SecurityUser actor, UUID id) {
+        User user = findOrThrowWithOrg(id);
+        accessControlService.assertCanManageUser(actor, user);
         user.setActive(false);
+        refreshTokenRepository.revokeAllByUserId(id);
         return DtoMapper.toResponse(userRepository.save(user));
     }
 
     @Transactional
-    public ResetPasswordResponse resetPassword(UUID id) {
-        User user = findOrThrow(id);
+    public UserResponse activate(SecurityUser actor, UUID id) {
+        User user = findOrThrowWithOrg(id);
+        accessControlService.assertCanManageUser(actor, user);
+        if (!user.getOrganization().isActive()) {
+            throw new IllegalArgumentException("Organization is inactive");
+        }
+        user.setActive(true);
+        return DtoMapper.toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse unlock(SecurityUser actor, UUID id) {
+        User user = findOrThrowWithOrg(id);
+        accessControlService.assertCanManageUser(actor, user);
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        return DtoMapper.toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public ResetPasswordResponse resetPassword(SecurityUser actor, UUID id) {
+        User user = findOrThrowWithOrg(id);
+        accessControlService.assertCanManageUser(actor, user);
+        if (actor.getRole() != UserRole.SUPER_ADMIN) {
+            throw new AccessDeniedException("Access denied");
+        }
         String tempPassword = generateTemporaryPassword();
         PasswordValidator.validate(tempPassword);
         user.setPasswordHash(passwordEncoder.encode(tempPassword));
         user.setMustChangePassword(true);
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        refreshTokenRepository.revokeAllByUserId(id);
         userRepository.save(user);
         return new ResetPasswordResponse(tempPassword);
     }
 
     @Transactional
-    public ImportResult importCsv(MultipartFile file) throws IOException {
+    public ImportResult importCsv(SecurityUser actor, MultipartFile file) throws IOException {
+        if (actor.getRole() != UserRole.SUPER_ADMIN) {
+            throw new AccessDeniedException("Access denied");
+        }
         List<Map<String, String>> rows = CsvUtils.parseSemicolonCsv(file.getInputStream());
         int created = 0;
         int updated = 0;
@@ -148,6 +213,15 @@ public class UserService {
         return new ImportResult(created, updated, errors);
     }
 
+    @Transactional(readOnly = true)
+    public Set<UUID> assignableOrganizationIds(SecurityUser actor) {
+        OrganizationScopeService.ScopeFilter scope = accessControlService.resolveUserSearchScope(actor);
+        if (scope.allOrganizations()) {
+            return Set.of();
+        }
+        return scope.organizationIds();
+    }
+
     private void applyRequest(User user, UserRequest request, Organization org) {
         user.setStaffNumber(request.staffNumber());
         user.setEmail(request.email().toLowerCase().trim());
@@ -175,6 +249,11 @@ public class UserService {
 
     private User findOrThrow(UUID id) {
         return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+    private User findOrThrowWithOrg(UUID id) {
+        return userRepository.findByIdWithOrganization(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 

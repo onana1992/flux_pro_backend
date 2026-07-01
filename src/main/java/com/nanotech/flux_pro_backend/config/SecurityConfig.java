@@ -1,6 +1,8 @@
 package com.nanotech.flux_pro_backend.config;
 
+import com.nanotech.flux_pro_backend.security.AccountInactiveException;
 import com.nanotech.flux_pro_backend.security.JwtAuthenticationFilter;
+import com.nanotech.flux_pro_backend.security.MustChangePasswordFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +33,7 @@ public class SecurityConfig {
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final MustChangePasswordFilter mustChangePasswordFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -44,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(mustChangePasswordFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 

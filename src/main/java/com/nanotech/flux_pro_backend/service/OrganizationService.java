@@ -3,6 +3,7 @@ package com.nanotech.flux_pro_backend.service;
 import com.nanotech.flux_pro_backend.dto.request.OrganizationRequest;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationTreeResponse;
 import com.nanotech.flux_pro_backend.entity.Organization;
+import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.mapper.DtoMapper;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
+    private final OrganizationTypeService organizationTypeService;
     private final OrganizationScopeService organizationScopeService;
 
     @Transactional(readOnly = true)
@@ -80,9 +82,16 @@ public class OrganizationService {
     }
 
     private void applyRequest(Organization org, OrganizationRequest request) {
+        OrganizationType type = organizationTypeService.getById(request.typeId());
+        if (!type.isActive()) {
+            throw new IllegalArgumentException("Organization type is inactive: " + type.getCode());
+        }
+        if (request.parentId() == null && !type.isAllowsRoot()) {
+            throw new IllegalArgumentException("Organization type cannot be root: " + type.getCode());
+        }
         org.setCode(request.code());
         org.setName(request.name());
-        org.setType(request.type());
+        org.setOrganizationType(type);
         org.setActive(request.active());
         if (request.parentId() != null) {
             Organization parent = organizationRepository.findById(request.parentId())

@@ -1,16 +1,15 @@
 package com.nanotech.flux_pro_backend.entity;
 
-import com.nanotech.flux_pro_backend.enumeration.OrganizationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "organization")
@@ -24,9 +23,10 @@ public class Organization extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private OrganizationType type;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_type_id", nullable = false, columnDefinition = "CHAR(36)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    private OrganizationType organizationType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")

@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.common;
 
+import com.nanotech.flux_pro_backend.security.AccountInactiveException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -33,6 +34,14 @@ public class GlobalExceptionHandler {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.LOCKED);
         detail.setTitle("Compte verrouillé");
         detail.setDetail(ex.getMessage());
+        return detail;
+    }
+
+    @ExceptionHandler(AccountInactiveException.class)
+    public ProblemDetail handleInactive(AccountInactiveException ex) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        detail.setTitle("Compte inactif");
+        detail.setProperty("failureReason", "USER_INACTIVE");
         return detail;
     }
 

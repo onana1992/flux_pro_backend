@@ -7,6 +7,7 @@ import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.mapper.DtoMapper;
 import com.nanotech.flux_pro_backend.repository.RefreshTokenRepository;
 import com.nanotech.flux_pro_backend.repository.UserRepository;
+import com.nanotech.flux_pro_backend.security.AccountInactiveException;
 import com.nanotech.flux_pro_backend.security.JwtTokenProvider;
 import com.nanotech.flux_pro_backend.security.PasswordValidator;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
@@ -46,7 +47,7 @@ public class AuthService {
 
         if (!user.isActive()) {
             loginAuditService.log(user, normalizedEmail, false, request, "USER_INACTIVE");
-            throw new BadCredentialsException("Account inactive");
+            throw new AccountInactiveException("Account inactive");
         }
 
         if (isLocked(user)) {
@@ -85,6 +86,18 @@ public class AuthService {
         }
 
         User user = refreshToken.getUser();
+        if (!user.isActive()) {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+            throw new AccountInactiveException("Account inactive");
+        }
+
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+            throw new LockedException("Account temporarily locked");
+        }
+
         refreshToken.setRevoked(true);
         refreshTokenRepository.save(refreshToken);
         return buildTokenResponse(user);
@@ -99,7 +112,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void changePassword(SecurityUser user, String currentPassword, String newPassword) {
+    public UserProfileResponse changePassword(SecurityUser user, String currentPassword, String newPassword) {
         PasswordValidator.validate(newPassword);
         User entity = userRepository.findById(user.getId())
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
@@ -112,6 +125,7 @@ public class AuthService {
         entity.setMustChangePassword(false);
         userRepository.save(entity);
         refreshTokenRepository.deleteByUserId(entity.getId());
+        return DtoMapper.toProfile(entity);
     }
 
     private TokenResponse buildTokenResponse(User user) {

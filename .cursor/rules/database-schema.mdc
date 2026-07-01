@@ -1,0 +1,44 @@
+---
+description: Schéma DB géré manuellement — ne pas modifier ddl-auto ni auto-migrer
+alwaysApply: true
+---
+
+# Gestion du schéma base de données
+
+## `ddl-auto` interdit à modifier
+
+- Ne **jamais** changer `spring.jpa.hibernate.ddl-auto` dans `application.properties` (ni dans un profil `application-*.properties`).
+- La valeur du projet est **`none`** et doit rester **`none`**.
+- Ne pas proposer `update`, `create`, `create-drop`, `validate` ni aucune alternative, même temporairement.
+- Si Hibernate/JPA échoue au démarrage à cause d’un écart schéma ↔ entités, corriger via **script SQL manuel**, pas via `ddl-auto`.
+
+## Toute évolution de schéma = SQL manuel
+
+Lorsqu’un changement touche la base (entités JPA, enums, colonnes, index, contraintes, données de référence) :
+
+1. **Ne pas** compter sur Hibernate pour appliquer le schéma.
+2. **Produire un script SQL** exécutable manuellement par l’équipe.
+3. **Placer le script** dans `docs/sql/`, avec un nom explicite et daté, par ex. :
+   - `docs/sql/2026-06-30_rename_user_roles.sql`
+4. Le script doit inclure :
+   - un en-tête commenté (objectif, tables impactées, prérequis),
+   - les instructions `ALTER` / `UPDATE` / `INSERT` nécessaires,
+   - si pertinent, une section `-- rollback` commentée.
+5. **Signaler clairement** dans la réponse que le script doit être exécuté manuellement sur MySQL avant ou après déploiement du code.
+
+## Exemples
+
+```properties
+# ❌ INTERDIT — ne pas modifier
+spring.jpa.hibernate.ddl-auto=update
+```
+
+```sql
+-- ✅ BIEN — docs/sql/2026-06-30_rename_user_roles.sql
+-- Objectif : aligner les rôles utilisateur avec les nouvelles valeurs enum
+UPDATE users SET role = 'BUSINESS_ADMIN' WHERE role = 'ADMIN_METIER';
+```
+
+## Entités JPA
+
+- Modifier les entités Java est autorisé, mais chaque changement de mapping (table, colonne, type, contrainte) **doit** être accompagné du script SQL correspondant dans `docs/sql/`.
