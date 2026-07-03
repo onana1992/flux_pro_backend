@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -69,4 +71,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.organization.id = :organizationId")
     boolean existsByOrganizationId(@Param("organizationId") UUID organizationId);
+
+    @Query("""
+            SELECT u FROM User u
+            JOIN FETCH u.organization
+            WHERE u.role = :role
+              AND u.active = true
+              AND u.organization.id IN :organizationIds
+            ORDER BY u.lastName ASC, u.firstName ASC
+            """)
+    List<User> findActiveByRoleInOrganizations(
+            @Param("role") UserRole role,
+            @Param("organizationIds") Collection<UUID> organizationIds);
 }

@@ -52,4 +52,5 @@ public final class RbacPermissions {
     public static final String FILES_CLOSE = "FILES:CLOSE";
     public static final String FILES_ARCHIVE = "FILES:ARCHIVE";
     public static final String FILES_DELETE = "FILES:DELETE";
+    public static final String FILES_TRANSMIT = "FILES:TRANSMIT";
 }

@@ -51,4 +51,6 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
             @Param("receivedTo") LocalDate receivedTo,
             @Param("search") String search,
             Pageable pageable);
+
+    boolean existsByChainTemplateIdAndStatus(UUID chainTemplateId, com.nanotech.flux_pro_backend.enumeration.FileStatus status);
 }

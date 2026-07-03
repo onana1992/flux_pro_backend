@@ -284,17 +284,16 @@ public class FileService {
                     "Only draft files can be submitted");
         }
 
-        ChainTemplate template = resolveTemplate(file.getFileTypeCode(), file.getPriority());
         String reference = allocateReferenceNumber(file.getOrganization().getId());
 
         if (fileRepository.existsByReferenceNumberIgnoreCase(reference)) {
             throw FileException.conflict("FILE_REFERENCE_EXISTS", "Reference number already exists: " + reference);
         }
 
-        file.setChainTemplate(template);
         file.setReferenceNumber(reference);
         file.setStatus(FileStatus.IN_PROGRESS);
-        return toDetail(fileRepository.save(file));
+        file = fileRepository.save(file);
+        return toDetail(file);
     }
 
     private void applyMetadata(

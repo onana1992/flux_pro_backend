@@ -87,6 +87,7 @@ public class RbacDataInitializer implements CommandLineRunner {
                 {RbacPermissions.FILES_CLOSE, "FILES", "CLOSE"},
                 {RbacPermissions.FILES_ARCHIVE, "FILES", "ARCHIVE"},
                 {RbacPermissions.FILES_DELETE, "FILES", "DELETE"},
+                {RbacPermissions.FILES_TRANSMIT, "FILES", "TRANSMIT"},
         };
         for (String[] def : definitions) {
             if (!permissionRepository.existsByName(def[0])) {
@@ -136,22 +137,26 @@ public class RbacDataInitializer implements CommandLineRunner {
         Set<String> filesAgent = set(
                 RbacPermissions.FILES_READ,
                 RbacPermissions.FILES_CREATE,
-                RbacPermissions.FILES_UPDATE);
+                RbacPermissions.FILES_UPDATE,
+                RbacPermissions.FILES_TRANSMIT);
         Set<String> filesDirector = set(
                 RbacPermissions.FILES_READ,
                 RbacPermissions.FILES_CREATE,
                 RbacPermissions.FILES_UPDATE,
+                RbacPermissions.FILES_TRANSMIT,
                 RbacPermissions.FILES_CLOSE,
                 RbacPermissions.FILES_ARCHIVE);
         Set<String> filesRegionalDirector = set(
                 RbacPermissions.FILES_READ,
                 RbacPermissions.FILES_CREATE,
                 RbacPermissions.FILES_UPDATE,
+                RbacPermissions.FILES_TRANSMIT,
                 RbacPermissions.FILES_CLOSE);
         Set<String> filesServiceHead = set(
                 RbacPermissions.FILES_READ,
                 RbacPermissions.FILES_CREATE,
-                RbacPermissions.FILES_UPDATE);
+                RbacPermissions.FILES_UPDATE,
+                RbacPermissions.FILES_TRANSMIT);
         Map<String, Set<String>> matrix = new HashMap<>();
         matrix.put(UserRole.SUPER_ADMIN.name(), allPermissions());
         matrix.put(UserRole.BUSINESS_ADMIN.name(), merge(set(
@@ -214,7 +219,8 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.FILE_TYPES_UPDATE, RbacPermissions.FILE_TYPES_DELETE,
                 RbacPermissions.FILES_READ, RbacPermissions.FILES_CREATE,
                 RbacPermissions.FILES_UPDATE, RbacPermissions.FILES_CLOSE,
-                RbacPermissions.FILES_ARCHIVE, RbacPermissions.FILES_DELETE));
+                RbacPermissions.FILES_ARCHIVE, RbacPermissions.FILES_DELETE,
+                RbacPermissions.FILES_TRANSMIT));
     }
 
     private Set<String> set(String... values) {
