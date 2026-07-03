@@ -15,6 +15,22 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(FileException.class)
+    public ProblemDetail handleFile(FileException ex) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
+        detail.setTitle(ex.getStatus().is4xxClientError() ? "Requête invalide" : "Erreur");
+        detail.setProperty("code", ex.getCode());
+        return detail;
+    }
+
+    @ExceptionHandler(ChainTemplateException.class)
+    public ProblemDetail handleChainTemplate(ChainTemplateException ex) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
+        detail.setTitle(ex.getStatus().is4xxClientError() ? "Requête invalide" : "Erreur");
+        detail.setProperty("code", ex.getCode());
+        return detail;
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());

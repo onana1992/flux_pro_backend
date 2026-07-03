@@ -8,7 +8,8 @@
 **Statut :** Spécification cible — **non implémenté**
 
 **Références :**
-- [Cahier des charges](./CAHIER-DES-CHARGES-CHAINEFLUX-MINTP%20(1).md) — CHN-01, CHN-02, §9
+- [Cahier des charges §7.4](./CAHIER-DES-CHARGES-CHAINEFLUX-MINTP%20(1).md) — CHN-01 à CHN-10
+- [SPEC CHN](./SPEC-CHN.md) — module parent chaîne de passation
 - [Sprint 3 — Chaînes & passation](./SPRINT-3-SPEC-CHAINES-PASSATION.md) — contexte global
 - [Inventaire types de dossiers](./PHASE-0-INVENTAIRE-TYPES-DOSSIERS.md) — catalogue COUR-STD, MARCHE-SMP, …
 - [SPEC USR / RBAC](./SPEC-USR-RBAC.md) — rôles `UserRole`, permissions

@@ -1,6 +1,7 @@
 package com.nanotech.flux_pro_backend.security;
 
 import com.nanotech.flux_pro_backend.dto.request.UserRequest;
+import com.nanotech.flux_pro_backend.entity.FileEntity;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
@@ -98,5 +99,20 @@ public class AccessControlService {
     public Set<UUID> readableOrganizationIds(SecurityUser actor) {
         OrganizationScopeService.ScopeFilter filter = organizationScopeService.resolveScopeFilter(actor);
         return filter.organizationIds();
+    }
+
+    @Transactional(readOnly = true)
+    public void assertCanAccessOrganization(SecurityUser actor, UUID organizationId) {
+        if (!organizationScopeService.canAccess(actor, organizationId)) {
+            throw new AccessDeniedException("Access denied to organization scope");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public void assertCanAccessFile(SecurityUser actor, FileEntity file) {
+        if (file.getOrganization() == null) {
+            throw new AccessDeniedException("Access denied to organization scope");
+        }
+        assertCanAccessOrganization(actor, file.getOrganization().getId());
     }
 }

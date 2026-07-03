@@ -35,4 +35,21 @@ public final class RbacPermissions {
     public static final String PERMISSIONS_DELETE = "PERMISSIONS:DELETE";
 
     public static final String LOGIN_AUDIT_READ = "LOGIN_AUDIT:READ";
+
+    public static final String CHAIN_TEMPLATES_READ = "CHAIN_TEMPLATES:READ";
+    public static final String CHAIN_TEMPLATES_CREATE = "CHAIN_TEMPLATES:CREATE";
+    public static final String CHAIN_TEMPLATES_UPDATE = "CHAIN_TEMPLATES:UPDATE";
+    public static final String CHAIN_TEMPLATES_DELETE = "CHAIN_TEMPLATES:DELETE";
+
+    public static final String FILE_TYPES_READ = "FILE_TYPES:READ";
+    public static final String FILE_TYPES_CREATE = "FILE_TYPES:CREATE";
+    public static final String FILE_TYPES_UPDATE = "FILE_TYPES:UPDATE";
+    public static final String FILE_TYPES_DELETE = "FILE_TYPES:DELETE";
+
+    public static final String FILES_READ = "FILES:READ";
+    public static final String FILES_CREATE = "FILES:CREATE";
+    public static final String FILES_UPDATE = "FILES:UPDATE";
+    public static final String FILES_CLOSE = "FILES:CLOSE";
+    public static final String FILES_ARCHIVE = "FILES:ARCHIVE";
+    public static final String FILES_DELETE = "FILES:DELETE";
 }
