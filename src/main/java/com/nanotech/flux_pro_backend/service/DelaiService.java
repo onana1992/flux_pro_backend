@@ -44,6 +44,26 @@ public class DelaiService {
         return now.isAfter(dueAt);
     }
 
+    /**
+     * Décale une échéance d'un nombre de jours/heures ouvrés positif ou négatif (ALR-06).
+     * Utilisé par le moteur d'alertes pour calculer un seuil (ex. J-2, J+3) par rapport à
+     * {@code FilePassage.dueAt} — jamais par rapport à la date de réception.
+     */
+    public Instant applyOffset(Instant dueAt, int offsetValue, DelayUnit unit) {
+        if (offsetValue == 0) {
+            return dueAt;
+        }
+        ZonedDateTime zonedDueAt = ZonedDateTime.ofInstant(dueAt, BUSINESS_ZONE);
+        if (offsetValue > 0) {
+            return unit == DelayUnit.WORKING_HOURS
+                    ? addWorkingHours(zonedDueAt, offsetValue).toInstant()
+                    : endOfWorkingDay(addWorkingDays(zonedDueAt, offsetValue)).toInstant();
+        }
+        return unit == DelayUnit.WORKING_HOURS
+                ? subtractWorkingHours(zonedDueAt, -offsetValue).toInstant()
+                : subtractWorkingDays(zonedDueAt, -offsetValue).toInstant();
+    }
+
     public int countWorkingDays(Instant start, Instant end) {
         if (end.isBefore(start)) {
             return 0;
@@ -106,6 +126,45 @@ public class DelaiService {
             remainingMinutes -= consume;
             if (remainingMinutes > 0) {
                 cursor = cursor.plusDays(1).with(WORK_START);
+            }
+        }
+        return cursor;
+    }
+
+    public ZonedDateTime subtractWorkingDays(ZonedDateTime start, int workingDays) {
+        ZonedDateTime cursor = alignToWorkingTime(start);
+        Set<LocalDate> holidays = loadHolidays(cursor.toLocalDate().minusDays(workingDays + 14L), cursor.toLocalDate());
+        int removed = 0;
+        while (removed < workingDays) {
+            cursor = cursor.minusDays(1).with(WORK_START);
+            if (isWorkingDay(cursor.toLocalDate(), holidays)) {
+                removed++;
+            }
+        }
+        return cursor;
+    }
+
+    public ZonedDateTime subtractWorkingHours(ZonedDateTime start, int workingHours) {
+        ZonedDateTime cursor = alignToWorkingTime(start);
+        int remainingMinutes = workingHours * 60;
+        Set<LocalDate> holidays = loadHolidays(
+                cursor.toLocalDate().minusDays(workingHours / 8L + 14L), cursor.toLocalDate());
+
+        while (remainingMinutes > 0) {
+            if (!isWorkingDay(cursor.toLocalDate(), holidays)) {
+                cursor = cursor.minusDays(1).with(WORK_END);
+                continue;
+            }
+            long minutesAvailableToday = ChronoUnit.MINUTES.between(cursor.with(WORK_START), cursor);
+            if (minutesAvailableToday <= 0) {
+                cursor = cursor.minusDays(1).with(WORK_END);
+                continue;
+            }
+            int consume = (int) Math.min(minutesAvailableToday, remainingMinutes);
+            cursor = cursor.minusMinutes(consume);
+            remainingMinutes -= consume;
+            if (remainingMinutes > 0) {
+                cursor = cursor.minusDays(1).with(WORK_END);
             }
         }
         return cursor;

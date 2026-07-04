@@ -53,4 +53,14 @@ public final class RbacPermissions {
     public static final String FILES_ARCHIVE = "FILES:ARCHIVE";
     public static final String FILES_DELETE = "FILES:DELETE";
     public static final String FILES_TRANSMIT = "FILES:TRANSMIT";
+
+    public static final String ALERT_TYPES_READ = "ALERT_TYPES:READ";
+    public static final String ALERT_TYPES_CREATE = "ALERT_TYPES:CREATE";
+    public static final String ALERT_TYPES_UPDATE = "ALERT_TYPES:UPDATE";
+    public static final String ALERT_TYPES_DELETE = "ALERT_TYPES:DELETE";
+
+    public static final String ALERT_RULES_READ = "ALERT_RULES:READ";
+    public static final String ALERT_RULES_CREATE = "ALERT_RULES:CREATE";
+    public static final String ALERT_RULES_UPDATE = "ALERT_RULES:UPDATE";
+    public static final String ALERT_RULES_DELETE = "ALERT_RULES:DELETE";
 }

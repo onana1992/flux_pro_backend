@@ -88,6 +88,14 @@ public class RbacDataInitializer implements CommandLineRunner {
                 {RbacPermissions.FILES_ARCHIVE, "FILES", "ARCHIVE"},
                 {RbacPermissions.FILES_DELETE, "FILES", "DELETE"},
                 {RbacPermissions.FILES_TRANSMIT, "FILES", "TRANSMIT"},
+                {RbacPermissions.ALERT_TYPES_READ, "ALERT_TYPES", "READ"},
+                {RbacPermissions.ALERT_TYPES_CREATE, "ALERT_TYPES", "CREATE"},
+                {RbacPermissions.ALERT_TYPES_UPDATE, "ALERT_TYPES", "UPDATE"},
+                {RbacPermissions.ALERT_TYPES_DELETE, "ALERT_TYPES", "DELETE"},
+                {RbacPermissions.ALERT_RULES_READ, "ALERT_RULES", "READ"},
+                {RbacPermissions.ALERT_RULES_CREATE, "ALERT_RULES", "CREATE"},
+                {RbacPermissions.ALERT_RULES_UPDATE, "ALERT_RULES", "UPDATE"},
+                {RbacPermissions.ALERT_RULES_DELETE, "ALERT_RULES", "DELETE"},
         };
         for (String[] def : definitions) {
             if (!permissionRepository.existsByName(def[0])) {
@@ -124,6 +132,16 @@ public class RbacDataInitializer implements CommandLineRunner {
     private Map<String, Set<String>> rolePermissionMatrix() {
         Set<String> chainRead = set(RbacPermissions.CHAIN_TEMPLATES_READ);
         Set<String> fileTypesRead = set(RbacPermissions.FILE_TYPES_READ);
+        Set<String> alertRead = set(RbacPermissions.ALERT_TYPES_READ, RbacPermissions.ALERT_RULES_READ);
+        Set<String> alertAdmin = set(
+                RbacPermissions.ALERT_TYPES_READ,
+                RbacPermissions.ALERT_TYPES_CREATE,
+                RbacPermissions.ALERT_TYPES_UPDATE,
+                RbacPermissions.ALERT_TYPES_DELETE,
+                RbacPermissions.ALERT_RULES_READ,
+                RbacPermissions.ALERT_RULES_CREATE,
+                RbacPermissions.ALERT_RULES_UPDATE,
+                RbacPermissions.ALERT_RULES_DELETE);
         Set<String> chainAdmin = set(
                 RbacPermissions.CHAIN_TEMPLATES_READ,
                 RbacPermissions.CHAIN_TEMPLATES_CREATE,
@@ -166,22 +184,22 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.ORGANIZATION_TYPES_READ, RbacPermissions.ORGANIZATION_TYPES_CREATE,
                 RbacPermissions.ORGANIZATION_TYPES_UPDATE, RbacPermissions.ORGANIZATION_TYPES_DELETE,
                 RbacPermissions.ROLES_READ, RbacPermissions.PERMISSIONS_READ),
-                merge(chainAdmin, merge(fileTypesAdmin, filesDirector))));
+                merge(chainAdmin, merge(fileTypesAdmin, merge(filesDirector, alertAdmin)))));
         matrix.put(UserRole.DIRECTOR.name(), merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesDirector))));
+                merge(chainRead, merge(fileTypesRead, merge(filesDirector, alertRead)))));
         matrix.put(UserRole.SERVICE_HEAD.name(), merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesServiceHead))));
+                merge(chainRead, merge(fileTypesRead, merge(filesServiceHead, alertRead)))));
         matrix.put(UserRole.REGIONAL_DIRECTOR.name(), merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesRegionalDirector))));
+                merge(chainRead, merge(fileTypesRead, merge(filesRegionalDirector, alertRead)))));
         matrix.put(UserRole.SECRETARY_GENERAL.name(), merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesRead))));
+                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead)))));
         matrix.put(UserRole.EXECUTIVE_OFFICE.name(), merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesRead))));
+                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead)))));
         matrix.put(UserRole.AGENT.name(), merge(set(RbacPermissions.ORGANIZATIONS_READ),
                 merge(chainRead, merge(fileTypesRead, filesAgent))));
         matrix.put(UserRole.SUPPORT.name(), merge(set(RbacPermissions.ORGANIZATIONS_READ),
@@ -220,7 +238,11 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.FILES_READ, RbacPermissions.FILES_CREATE,
                 RbacPermissions.FILES_UPDATE, RbacPermissions.FILES_CLOSE,
                 RbacPermissions.FILES_ARCHIVE, RbacPermissions.FILES_DELETE,
-                RbacPermissions.FILES_TRANSMIT));
+                RbacPermissions.FILES_TRANSMIT,
+                RbacPermissions.ALERT_TYPES_READ, RbacPermissions.ALERT_TYPES_CREATE,
+                RbacPermissions.ALERT_TYPES_UPDATE, RbacPermissions.ALERT_TYPES_DELETE,
+                RbacPermissions.ALERT_RULES_READ, RbacPermissions.ALERT_RULES_CREATE,
+                RbacPermissions.ALERT_RULES_UPDATE, RbacPermissions.ALERT_RULES_DELETE));
     }
 
     private Set<String> set(String... values) {

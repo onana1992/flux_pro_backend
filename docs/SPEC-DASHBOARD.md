@@ -7,6 +7,8 @@
 **Date :** 1er juillet 2026  
 **Statut :** **Implémenté (Sprint 1)** — KPI dossiers en attente Sprint 2 / Sprint 5
 
+> **Voir aussi :** [SPEC-DSH.md](./SPEC-DSH.md) — spécification cible du module Tableaux de bord et reporting (CDC §7.6 DSH-01 à DSH-08, §11). Le présent document décrit uniquement l'état livré au Sprint 1 (page d'accueil, KPI non connectés) ; SPEC-DSH.md couvre les KPI réels, le périmètre organisationnel, les exports et le rapport mensuel automatique.
+
 **Références :**
 - [Cahier des charges](./CAHIER-DES-CHARGES-CHAINEFLUX-MINTP%20(1).md) — §7 (tableaux de bord), PERF-01
 - [Roadmap](./ROADMAP-IMPLEMENTATION-CHAINEFLUX.md) — Sprint 1 (page d'accueil), Sprint 5 (dashboards métier)
