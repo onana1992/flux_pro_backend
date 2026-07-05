@@ -36,6 +36,8 @@ public final class RbacPermissions {
 
     public static final String LOGIN_AUDIT_READ = "LOGIN_AUDIT:READ";
 
+    public static final String AUDIT_LOG_READ = "AUDIT_LOG:READ";
+
     public static final String CHAIN_TEMPLATES_READ = "CHAIN_TEMPLATES:READ";
     public static final String CHAIN_TEMPLATES_CREATE = "CHAIN_TEMPLATES:CREATE";
     public static final String CHAIN_TEMPLATES_UPDATE = "CHAIN_TEMPLATES:UPDATE";
@@ -63,4 +65,7 @@ public final class RbacPermissions {
     public static final String ALERT_RULES_CREATE = "ALERT_RULES:CREATE";
     public static final String ALERT_RULES_UPDATE = "ALERT_RULES:UPDATE";
     public static final String ALERT_RULES_DELETE = "ALERT_RULES:DELETE";
+
+    public static final String DASHBOARD_READ = "DASHBOARD:READ";
+    public static final String DASHBOARD_EXPORT = "DASHBOARD:EXPORT";
 }

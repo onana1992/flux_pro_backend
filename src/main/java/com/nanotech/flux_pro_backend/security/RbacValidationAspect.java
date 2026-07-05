@@ -4,6 +4,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,8 +16,10 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** S'exécute avant {@link AdminAuditAspect} (voir {@code @Order}) : un accès refusé n'est jamais journalisé comme une action. */
 @Aspect
 @Component
+@Order(10)
 public class RbacValidationAspect {
 
     @Around("@annotation(requiresPermission) || @within(requiresPermission)")

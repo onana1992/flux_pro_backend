@@ -73,6 +73,7 @@ public class RbacDataInitializer implements CommandLineRunner {
                 {RbacPermissions.PERMISSIONS_UPDATE, "PERMISSIONS", "UPDATE"},
                 {RbacPermissions.PERMISSIONS_DELETE, "PERMISSIONS", "DELETE"},
                 {RbacPermissions.LOGIN_AUDIT_READ, "LOGIN_AUDIT", "READ"},
+                {RbacPermissions.AUDIT_LOG_READ, "AUDIT_LOG", "READ"},
                 {RbacPermissions.CHAIN_TEMPLATES_READ, "CHAIN_TEMPLATES", "READ"},
                 {RbacPermissions.CHAIN_TEMPLATES_CREATE, "CHAIN_TEMPLATES", "CREATE"},
                 {RbacPermissions.CHAIN_TEMPLATES_UPDATE, "CHAIN_TEMPLATES", "UPDATE"},
@@ -96,6 +97,8 @@ public class RbacDataInitializer implements CommandLineRunner {
                 {RbacPermissions.ALERT_RULES_CREATE, "ALERT_RULES", "CREATE"},
                 {RbacPermissions.ALERT_RULES_UPDATE, "ALERT_RULES", "UPDATE"},
                 {RbacPermissions.ALERT_RULES_DELETE, "ALERT_RULES", "DELETE"},
+                {RbacPermissions.DASHBOARD_READ, "DASHBOARD", "READ"},
+                {RbacPermissions.DASHBOARD_EXPORT, "DASHBOARD", "EXPORT"},
         };
         for (String[] def : definitions) {
             if (!permissionRepository.existsByName(def[0])) {
@@ -142,6 +145,8 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.ALERT_RULES_CREATE,
                 RbacPermissions.ALERT_RULES_UPDATE,
                 RbacPermissions.ALERT_RULES_DELETE);
+        Set<String> dashboardRead = set(RbacPermissions.DASHBOARD_READ);
+        Set<String> dashboardFull = set(RbacPermissions.DASHBOARD_READ, RbacPermissions.DASHBOARD_EXPORT);
         Set<String> chainAdmin = set(
                 RbacPermissions.CHAIN_TEMPLATES_READ,
                 RbacPermissions.CHAIN_TEMPLATES_CREATE,
@@ -177,36 +182,36 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.FILES_TRANSMIT);
         Map<String, Set<String>> matrix = new HashMap<>();
         matrix.put(UserRole.SUPER_ADMIN.name(), allPermissions());
-        matrix.put(UserRole.BUSINESS_ADMIN.name(), merge(set(
+        matrix.put(UserRole.BUSINESS_ADMIN.name(), merge(dashboardFull, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.USERS_CREATE, RbacPermissions.USERS_UPDATE,
                 RbacPermissions.ORGANIZATIONS_READ, RbacPermissions.ORGANIZATIONS_CREATE,
                 RbacPermissions.ORGANIZATIONS_UPDATE, RbacPermissions.ORGANIZATIONS_DELETE,
                 RbacPermissions.ORGANIZATION_TYPES_READ, RbacPermissions.ORGANIZATION_TYPES_CREATE,
                 RbacPermissions.ORGANIZATION_TYPES_UPDATE, RbacPermissions.ORGANIZATION_TYPES_DELETE,
                 RbacPermissions.ROLES_READ, RbacPermissions.PERMISSIONS_READ),
-                merge(chainAdmin, merge(fileTypesAdmin, merge(filesDirector, alertAdmin)))));
-        matrix.put(UserRole.DIRECTOR.name(), merge(set(
+                merge(chainAdmin, merge(fileTypesAdmin, merge(filesDirector, alertAdmin))))));
+        matrix.put(UserRole.DIRECTOR.name(), merge(dashboardFull, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesDirector, alertRead)))));
-        matrix.put(UserRole.SERVICE_HEAD.name(), merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesDirector, alertRead))))));
+        matrix.put(UserRole.SERVICE_HEAD.name(), merge(dashboardFull, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesServiceHead, alertRead)))));
-        matrix.put(UserRole.REGIONAL_DIRECTOR.name(), merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesServiceHead, alertRead))))));
+        matrix.put(UserRole.REGIONAL_DIRECTOR.name(), merge(dashboardFull, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesRegionalDirector, alertRead)))));
-        matrix.put(UserRole.SECRETARY_GENERAL.name(), merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesRegionalDirector, alertRead))))));
+        matrix.put(UserRole.SECRETARY_GENERAL.name(), merge(dashboardFull, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead)))));
-        matrix.put(UserRole.EXECUTIVE_OFFICE.name(), merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead))))));
+        matrix.put(UserRole.EXECUTIVE_OFFICE.name(), merge(dashboardFull, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead)))));
-        matrix.put(UserRole.AGENT.name(), merge(set(RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesAgent))));
-        matrix.put(UserRole.SUPPORT.name(), merge(set(RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesAgent))));
-        matrix.put(UserRole.READER.name(), merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead))))));
+        matrix.put(UserRole.AGENT.name(), merge(dashboardRead, merge(set(RbacPermissions.ORGANIZATIONS_READ),
+                merge(chainRead, merge(fileTypesRead, filesAgent)))));
+        matrix.put(UserRole.SUPPORT.name(), merge(dashboardRead, merge(set(RbacPermissions.ORGANIZATIONS_READ),
+                merge(chainRead, merge(fileTypesRead, filesAgent)))));
+        matrix.put(UserRole.READER.name(), merge(dashboardRead, merge(set(
                 RbacPermissions.ORGANIZATIONS_READ, RbacPermissions.USERS_READ),
-                merge(chainRead, merge(fileTypesRead, filesRead))));
+                merge(chainRead, merge(fileTypesRead, filesRead)))));
         return matrix;
     }
 
@@ -230,7 +235,7 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.ROLES_DELETE,
                 RbacPermissions.PERMISSIONS_READ, RbacPermissions.PERMISSIONS_CREATE,
                 RbacPermissions.PERMISSIONS_UPDATE, RbacPermissions.PERMISSIONS_DELETE,
-                RbacPermissions.LOGIN_AUDIT_READ,
+                RbacPermissions.LOGIN_AUDIT_READ, RbacPermissions.AUDIT_LOG_READ,
                 RbacPermissions.CHAIN_TEMPLATES_READ, RbacPermissions.CHAIN_TEMPLATES_CREATE,
                 RbacPermissions.CHAIN_TEMPLATES_UPDATE, RbacPermissions.CHAIN_TEMPLATES_DELETE,
                 RbacPermissions.FILE_TYPES_READ, RbacPermissions.FILE_TYPES_CREATE,
@@ -242,7 +247,8 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.ALERT_TYPES_READ, RbacPermissions.ALERT_TYPES_CREATE,
                 RbacPermissions.ALERT_TYPES_UPDATE, RbacPermissions.ALERT_TYPES_DELETE,
                 RbacPermissions.ALERT_RULES_READ, RbacPermissions.ALERT_RULES_CREATE,
-                RbacPermissions.ALERT_RULES_UPDATE, RbacPermissions.ALERT_RULES_DELETE));
+                RbacPermissions.ALERT_RULES_UPDATE, RbacPermissions.ALERT_RULES_DELETE,
+                RbacPermissions.DASHBOARD_READ, RbacPermissions.DASHBOARD_EXPORT));
     }
 
     private Set<String> set(String... values) {

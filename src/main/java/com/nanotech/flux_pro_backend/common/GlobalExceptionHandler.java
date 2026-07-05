@@ -39,6 +39,14 @@ public class GlobalExceptionHandler {
         return detail;
     }
 
+    @ExceptionHandler(DashboardException.class)
+    public ProblemDetail handleDashboard(DashboardException ex) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
+        detail.setTitle(ex.getStatus().is4xxClientError() ? "Requête invalide" : "Erreur");
+        detail.setProperty("code", ex.getCode());
+        return detail;
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
