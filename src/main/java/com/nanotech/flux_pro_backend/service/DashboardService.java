@@ -201,7 +201,8 @@ public class DashboardService {
         validateWindowDays(windowDays);
         if (!organizationTypeRepository.existsByCode(groupByTypeCode)) {
             throw DashboardException.badRequest(
-                    "DASHBOARD_GROUP_TYPE_INVALID", "Type d'organisation inconnu : " + groupByTypeCode);
+                    "DASHBOARD_GROUP_TYPE_INVALID", "Type d'organisation inconnu : " + groupByTypeCode,
+                    groupByTypeCode);
         }
         OrganizationScopeService.ScopeFilter scope = organizationScopeService.resolveScopeFilter(actor);
         if (!scope.allOrganizations() && scope.organizationIds().isEmpty()) {

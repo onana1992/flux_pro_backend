@@ -52,7 +52,7 @@ public class FileAttachmentService {
         validateFile(multipart);
 
         User uploader = userRepository.findById(actor.getId())
-                .orElseThrow(() -> FileException.notFound("User not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_USER_NOT_FOUND", "User not found"));
 
         String storageKey;
         try {
@@ -62,7 +62,9 @@ public class FileAttachmentService {
                     multipart.getOriginalFilename(),
                     multipart.getInputStream());
         } catch (IOException e) {
-            throw FileException.badRequest("FILE_ATTACHMENT_INVALID", "Failed to store attachment: " + e.getMessage());
+            throw FileException.badRequest(
+                    "FILE_ATTACHMENT_STORE_FAILED", "Failed to store attachment: " + e.getMessage(),
+                    e.getMessage());
         }
 
         FileAttachment attachment = new FileAttachment();
@@ -81,14 +83,16 @@ public class FileAttachmentService {
     @Transactional
     public void delete(FileEntity file, UUID attachmentId) {
         if (file.getStatus() != FileStatus.DRAFT) {
-            throw FileException.conflict("FILE_ATTACHMENT_LOCKED", "Attachments cannot be deleted after submission");
+            throw FileException.conflict(
+                    "FILE_ATTACHMENT_DELETE_LOCKED", "Attachments cannot be deleted after submission");
         }
         FileAttachment attachment = fileAttachmentRepository.findByIdAndFileId(attachmentId, file.getId())
-                .orElseThrow(() -> FileException.notFound("Attachment not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_ATTACHMENT_NOT_FOUND", "Attachment not found"));
         try {
             storageService.delete(attachment.getStorageKey());
         } catch (IOException e) {
-            throw FileException.badRequest("FILE_ATTACHMENT_INVALID", "Failed to delete attachment file");
+            throw FileException.badRequest(
+                    "FILE_ATTACHMENT_DELETE_FAILED", "Failed to delete attachment file");
         }
         fileAttachmentRepository.delete(attachment);
     }
@@ -96,18 +100,19 @@ public class FileAttachmentService {
     @Transactional(readOnly = true)
     public Resource download(FileEntity file, UUID attachmentId) {
         FileAttachment attachment = fileAttachmentRepository.findByIdAndFileId(attachmentId, file.getId())
-                .orElseThrow(() -> FileException.notFound("Attachment not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_ATTACHMENT_NOT_FOUND", "Attachment not found"));
         try {
             return storageService.loadAsResource(attachment.getStorageKey());
         } catch (IOException e) {
-            throw FileException.notFound("Attachment file not found on storage");
+            throw FileException.notFound(
+                    "FILE_ATTACHMENT_STORAGE_MISSING", "Attachment file not found on storage");
         }
     }
 
     @Transactional(readOnly = true)
     public FileAttachment getAttachment(FileEntity file, UUID attachmentId) {
         return fileAttachmentRepository.findByIdAndFileId(attachmentId, file.getId())
-                .orElseThrow(() -> FileException.notFound("Attachment not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_ATTACHMENT_NOT_FOUND", "Attachment not found"));
     }
 
     @Transactional(readOnly = true)
@@ -122,15 +127,16 @@ public class FileAttachmentService {
 
     void validateFile(MultipartFile multipart) {
         if (multipart == null || multipart.isEmpty()) {
-            throw FileException.badRequest("FILE_ATTACHMENT_INVALID", "Attachment file is required");
+            throw FileException.badRequest("FILE_ATTACHMENT_REQUIRED", "Attachment file is required");
         }
         if (multipart.getSize() > MAX_SIZE_BYTES) {
-            throw FileException.badRequest("FILE_ATTACHMENT_INVALID", "Attachment exceeds maximum size of 20 MB");
+            throw FileException.badRequest(
+                    "FILE_ATTACHMENT_TOO_LARGE", "Attachment exceeds maximum size of 20 MB");
         }
         String contentType = multipart.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
             throw FileException.badRequest(
-                    "FILE_ATTACHMENT_INVALID",
+                    "FILE_ATTACHMENT_TYPE_NOT_ALLOWED",
                     "Attachment type not allowed. Allowed: PDF, DOCX, XLSX, JPEG, PNG");
         }
     }
@@ -142,6 +148,7 @@ public class FileAttachmentService {
         if (file.getStatus() == FileStatus.IN_PROGRESS && responseDocument) {
             return;
         }
-        throw FileException.conflict("FILE_ATTACHMENT_LOCKED", "Attachments can only be uploaded on draft files");
+        throw FileException.conflict(
+                "FILE_ATTACHMENT_UPLOAD_LOCKED", "Attachments can only be uploaded on draft files");
     }
 }

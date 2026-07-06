@@ -41,7 +41,7 @@ public class DashboardExportService {
             case DATASET_COMPLIANCE_RANKING -> writeComplianceRanking(sb, actor, groupByTypeCode, windowDays);
             case DATASET_DELAY_BY_TYPE -> writeDelayByType(sb, actor, organizationId, windowDays);
             default -> throw DashboardException.badRequest(
-                    "DASHBOARD_DATASET_INVALID", "Jeu de données inconnu : " + dataset);
+                    "DASHBOARD_DATASET_INVALID", "Jeu de données inconnu : " + dataset, dataset);
         }
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }

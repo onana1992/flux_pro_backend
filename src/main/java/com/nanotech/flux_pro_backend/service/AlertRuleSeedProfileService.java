@@ -89,7 +89,8 @@ public class AlertRuleSeedProfileService {
             throw AlertException.conflict(
                     "ALERT_TYPE_SEED_MISSING",
                     "Seed alert type not found: " + code
-                            + " — execute docs/sql/2026-07-04_alert_types.sql before applying the default profile");
+                            + " — execute docs/sql/2026-07-04_alert_types.sql before applying the default profile",
+                    code);
         }
     }
 }

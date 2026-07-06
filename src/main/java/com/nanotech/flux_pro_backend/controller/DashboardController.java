@@ -91,7 +91,8 @@ public class DashboardController {
             @RequestParam(defaultValue = "DIRECTORATE") String groupByTypeCode) {
         if (!"csv".equalsIgnoreCase(format)) {
             throw DashboardException.badRequest(
-                    "DASHBOARD_FORMAT_UNSUPPORTED", "Format non supporté à ce jour : " + format + " (PDF à venir)");
+                    "DASHBOARD_FORMAT_UNSUPPORTED", "Format non supporté à ce jour : " + format + " (PDF à venir)",
+                    format);
         }
         byte[] csv = dashboardExportService.exportCsv(
                 dataset, securityUtils.currentUser(), organizationId, windowDays, groupByTypeCode);

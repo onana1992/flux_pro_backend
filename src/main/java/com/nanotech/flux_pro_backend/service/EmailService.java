@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.service;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.entity.Alert;
 import com.nanotech.flux_pro_backend.entity.User;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,9 @@ public class EmailService {
     public void send(Alert alert) {
         User recipient = alert.getRecipient();
         if (recipient.getEmail() == null || recipient.getEmail().isBlank()) {
-            throw new IllegalStateException("Recipient has no email address: " + recipient.getId());
+            throw AppException.badRequest(
+                    "ALERT_RECIPIENT_NO_EMAIL", "Recipient has no email address: " + recipient.getId(),
+                    recipient.getId());
         }
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);

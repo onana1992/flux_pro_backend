@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.service;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.dto.request.OrganizationRequest;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationDetailResponse;
 import com.nanotech.flux_pro_backend.dto.response.OrganizationTreeResponse;
@@ -11,8 +12,8 @@ import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
 import com.nanotech.flux_pro_backend.repository.UserRepository;
 import com.nanotech.flux_pro_backend.security.OrganizationScopeService;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
+import com.nanotech.flux_pro_backend.security.TranslatableAccessDeniedException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,9 +57,10 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public Organization getById(UUID id, SecurityUser user) {
         Organization org = organizationRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+                .orElseThrow(() -> AppException.notFound("ORGANIZATION_NOT_FOUND", "Organization not found"));
         if (!organizationScopeService.canAccess(user, id)) {
-            throw new AccessDeniedException("Access denied to this organization");
+            throw new TranslatableAccessDeniedException(
+                    "ACCESS_DENIED_ORGANIZATION", "Access denied to this organization");
         }
         return org;
     }
@@ -71,7 +73,9 @@ public class OrganizationService {
     @Transactional
     public Organization create(OrganizationRequest request) {
         if (organizationRepository.existsByCode(request.code())) {
-            throw new IllegalArgumentException("Organization code already in use: " + request.code());
+            throw AppException.badRequest(
+                    "ORGANIZATION_CODE_IN_USE", "Organization code already in use: " + request.code(),
+                    request.code());
         }
         Organization org = new Organization();
         applyRequest(org, request);
@@ -81,9 +85,11 @@ public class OrganizationService {
     @Transactional
     public Organization update(UUID id, OrganizationRequest request) {
         Organization org = organizationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+                .orElseThrow(() -> AppException.notFound("ORGANIZATION_NOT_FOUND", "Organization not found"));
         if (!org.getCode().equals(request.code()) && organizationRepository.existsByCode(request.code())) {
-            throw new IllegalArgumentException("Organization code already in use: " + request.code());
+            throw AppException.badRequest(
+                    "ORGANIZATION_CODE_IN_USE", "Organization code already in use: " + request.code(),
+                    request.code());
         }
         applyRequest(org, request);
         return organizationRepository.save(org);
@@ -92,7 +98,7 @@ public class OrganizationService {
     @Transactional
     public Organization deactivate(UUID id) {
         Organization org = organizationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+                .orElseThrow(() -> AppException.notFound("ORGANIZATION_NOT_FOUND", "Organization not found"));
         org.setActive(false);
         return organizationRepository.save(org);
     }
@@ -100,12 +106,14 @@ public class OrganizationService {
     @Transactional
     public void delete(UUID id) {
         Organization org = organizationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+                .orElseThrow(() -> AppException.notFound("ORGANIZATION_NOT_FOUND", "Organization not found"));
         if (organizationRepository.existsByParentId(id)) {
-            throw new IllegalArgumentException("Cannot delete organization with child entities");
+            throw AppException.conflict(
+                    "ORGANIZATION_HAS_CHILDREN", "Cannot delete organization with child entities");
         }
         if (userRepository.existsByOrganizationId(id)) {
-            throw new IllegalArgumentException("Cannot delete organization with assigned users");
+            throw AppException.conflict(
+                    "ORGANIZATION_HAS_USERS", "Cannot delete organization with assigned users");
         }
         organizationRepository.delete(org);
     }
@@ -113,10 +121,14 @@ public class OrganizationService {
     private void applyRequest(Organization org, OrganizationRequest request) {
         OrganizationType type = organizationTypeService.getById(request.typeId());
         if (!type.isActive()) {
-            throw new IllegalArgumentException("Organization type is inactive: " + type.getCode());
+            throw AppException.badRequest(
+                    "ORGANIZATION_TYPE_INACTIVE", "Organization type is inactive: " + type.getCode(),
+                    type.getCode());
         }
         if (request.parentId() == null && !type.isAllowsRoot()) {
-            throw new IllegalArgumentException("Organization type cannot be root: " + type.getCode());
+            throw AppException.badRequest(
+                    "ORGANIZATION_TYPE_CANNOT_BE_ROOT", "Organization type cannot be root: " + type.getCode(),
+                    type.getCode());
         }
         org.setCode(request.code());
         org.setName(request.name());
@@ -124,7 +136,8 @@ public class OrganizationService {
         org.setActive(request.active());
         if (request.parentId() != null) {
             Organization parent = organizationRepository.findById(request.parentId())
-                    .orElseThrow(() -> new IllegalArgumentException("Parent organization not found"));
+                    .orElseThrow(() -> AppException.notFound(
+                            "ORGANIZATION_PARENT_NOT_FOUND", "Parent organization not found"));
             org.setParent(parent);
         } else {
             org.setParent(null);

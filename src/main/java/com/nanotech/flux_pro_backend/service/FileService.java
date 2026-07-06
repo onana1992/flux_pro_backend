@@ -101,7 +101,8 @@ public class FileService {
     @Transactional(readOnly = true)
     public FileDetailResponse findByReference(String reference, SecurityUser actor) {
         FileEntity file = fileRepository.findByReferenceNumberIgnoreCase(reference)
-                .orElseThrow(() -> FileException.notFound("File not found: " + reference));
+                .orElseThrow(() -> FileException.notFound(
+                        "FILE_NOT_FOUND_BY_REFERENCE", "File not found: " + reference, reference));
         accessControlService.assertCanAccessFile(actor, file);
         return toDetail(loadWithDetails(file.getId()));
     }
@@ -112,13 +113,13 @@ public class FileService {
         validateFileType(request.fileTypeCode());
 
         Organization organization = organizationRepository.findById(request.organizationId())
-                .orElseThrow(() -> FileException.badRequest("FILE_TYPE_INVALID", "Organization not found"));
+                .orElseThrow(() -> FileException.badRequest("FILE_ORGANIZATION_NOT_FOUND", "Organization not found"));
         if (!organization.isActive()) {
-            throw FileException.badRequest("FILE_TYPE_INVALID", "Organization is inactive");
+            throw FileException.badRequest("FILE_ORGANIZATION_INACTIVE", "Organization is inactive");
         }
 
         User creator = userRepository.findById(actor.getId())
-                .orElseThrow(() -> FileException.notFound("User not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_USER_NOT_FOUND", "User not found"));
 
         FileEntity file = new FileEntity();
         file.setFileTypeCode(request.fileTypeCode().trim().toUpperCase());
@@ -146,9 +147,9 @@ public class FileService {
         validateFileType(request.fileTypeCode());
 
         Organization organization = organizationRepository.findById(request.organizationId())
-                .orElseThrow(() -> FileException.badRequest("FILE_TYPE_INVALID", "Organization not found"));
+                .orElseThrow(() -> FileException.badRequest("FILE_ORGANIZATION_NOT_FOUND", "Organization not found"));
         if (!organization.isActive()) {
-            throw FileException.badRequest("FILE_TYPE_INVALID", "Organization is inactive");
+            throw FileException.badRequest("FILE_ORGANIZATION_INACTIVE", "Organization is inactive");
         }
 
         file.setFileTypeCode(request.fileTypeCode().trim().toUpperCase());
@@ -172,8 +173,8 @@ public class FileService {
         accessControlService.assertCanAccessFile(actor, file);
         if (file.getStatus() != FileStatus.DRAFT && file.getStatus() != FileStatus.IN_PROGRESS) {
             throw FileException.conflict(
-                    "FILE_STATUS_TRANSITION_INVALID",
-                    "File cannot be cancelled in status " + file.getStatus());
+                    "FILE_STATUS_CANCEL_INVALID",
+                    "File cannot be cancelled in status " + file.getStatus(), file.getStatus());
         }
         file.setStatus(FileStatus.CANCELLED);
         file.setCancellationReason(request.reason());
@@ -187,7 +188,7 @@ public class FileService {
         accessControlService.assertCanAccessFile(actor, file);
         if (file.getStatus() != FileStatus.IN_PROGRESS) {
             throw FileException.conflict(
-                    "FILE_STATUS_TRANSITION_INVALID",
+                    "FILE_STATUS_CLOSE_INVALID",
                     "File can only be closed when in progress");
         }
 
@@ -212,7 +213,7 @@ public class FileService {
         accessControlService.assertCanAccessFile(actor, file);
         if (file.getStatus() != FileStatus.CLOSED) {
             throw FileException.conflict(
-                    "FILE_STATUS_TRANSITION_INVALID",
+                    "FILE_STATUS_ARCHIVE_INVALID",
                     "Only closed files can be archived");
         }
         file.setStatus(FileStatus.ARCHIVED);
@@ -239,7 +240,7 @@ public class FileService {
     @Transactional
     public String allocateReferenceNumber(UUID organizationId) {
         Organization organization = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> FileException.badRequest("FILE_TYPE_INVALID", "Organization not found"));
+                .orElseThrow(() -> FileException.badRequest("FILE_ORGANIZATION_NOT_FOUND", "Organization not found"));
 
         int year = ZonedDateTime.now(NUMBERING_ZONE).getYear();
         FileNumberSequence sequence = fileNumberSequenceRepository.findForUpdate(organizationId, year)
@@ -266,28 +267,29 @@ public class FileService {
             return chainTemplateRepository.findByCodeIgnoreCase(VERY_URGENT_TEMPLATE_CODE)
                     .filter(ChainTemplate::isActive)
                     .orElseThrow(() -> FileException.badRequest(
-                            "FILE_TEMPLATE_NOT_FOUND",
+                            "FILE_TEMPLATE_NOT_FOUND_URGENT",
                             "No active chain template found for very urgent courier"));
         }
 
         return chainTemplateRepository
                 .findFirstByFileTypeCodeIgnoreCaseAndActiveTrue(fileTypeCode.trim())
                 .orElseThrow(() -> FileException.badRequest(
-                        "FILE_TEMPLATE_NOT_FOUND",
-                        "No active chain template found for file type: " + fileTypeCode));
+                        "FILE_TEMPLATE_NOT_FOUND_BY_TYPE",
+                        "No active chain template found for file type: " + fileTypeCode, fileTypeCode));
     }
 
     private FileDetailResponse submitInternal(FileEntity file, SecurityUser actor) {
         if (file.getStatus() != FileStatus.DRAFT) {
             throw FileException.conflict(
-                    "FILE_STATUS_TRANSITION_INVALID",
+                    "FILE_STATUS_SUBMIT_INVALID",
                     "Only draft files can be submitted");
         }
 
         String reference = allocateReferenceNumber(file.getOrganization().getId());
 
         if (fileRepository.existsByReferenceNumberIgnoreCase(reference)) {
-            throw FileException.conflict("FILE_REFERENCE_EXISTS", "Reference number already exists: " + reference);
+            throw FileException.conflict(
+                    "FILE_REFERENCE_EXISTS", "Reference number already exists: " + reference, reference);
         }
 
         file.setReferenceNumber(reference);
@@ -313,10 +315,10 @@ public class FileService {
     private void validateFileType(String fileTypeCode) {
         FileType fileType = fileTypeRepository.findByCodeIgnoreCase(fileTypeCode.trim())
                 .orElseThrow(() -> FileException.badRequest(
-                        "FILE_TYPE_INVALID", "File type not found or inactive: " + fileTypeCode));
+                        "FILE_TYPE_INVALID", "File type not found or inactive: " + fileTypeCode, fileTypeCode));
         if (!fileType.isActive()) {
             throw FileException.badRequest(
-                    "FILE_TYPE_INVALID", "File type not found or inactive: " + fileTypeCode);
+                    "FILE_TYPE_INVALID", "File type not found or inactive: " + fileTypeCode, fileTypeCode);
         }
     }
 
@@ -324,13 +326,13 @@ public class FileService {
         if (file.getStatus() != FileStatus.DRAFT) {
             throw FileException.conflict(
                     "FILE_NOT_EDITABLE",
-                    "File cannot be edited in status " + file.getStatus());
+                    "File cannot be edited in status " + file.getStatus(), file.getStatus());
         }
     }
 
     private FileEntity loadWithDetails(UUID id) {
         return fileRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> FileException.notFound("File not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_NOT_FOUND", "File not found"));
     }
 
     private FileDetailResponse toDetail(FileEntity file) {

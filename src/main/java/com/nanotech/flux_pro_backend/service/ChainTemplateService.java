@@ -44,13 +44,15 @@ public class ChainTemplateService {
     @Transactional(readOnly = true)
     public ChainTemplate findById(UUID id) {
         return chainTemplateRepository.findByIdWithSteps(id)
-                .orElseThrow(() -> ChainTemplateException.notFound("Chain template not found"));
+                .orElseThrow(() -> ChainTemplateException.notFound(
+                        "CHAIN_TEMPLATE_NOT_FOUND", "Chain template not found"));
     }
 
     @Transactional(readOnly = true)
     public ChainTemplate findByCode(String code) {
         return chainTemplateRepository.findByCodeWithSteps(code)
-                .orElseThrow(() -> ChainTemplateException.notFound("Chain template not found: " + code));
+                .orElseThrow(() -> ChainTemplateException.notFound(
+                        "CHAIN_TEMPLATE_NOT_FOUND_BY_CODE", "Chain template not found: " + code, code));
     }
 
     @Transactional
@@ -152,7 +154,7 @@ public class ChainTemplateService {
     void validateSteps(ChainTemplate template, List<ChainStepTemplateRequest> steps) {
         if (steps == null || steps.size() < 2) {
             throw ChainTemplateException.badRequest(
-                    "CHAIN_STEP_ORDER_GAP", "At least two chain steps are required");
+                    "CHAIN_STEP_MIN_COUNT", "At least two chain steps are required");
         }
         List<ChainStepTemplateRequest> ordered = steps.stream()
                 .sorted(Comparator.comparingInt(ChainStepTemplateRequest::stepOrder))
@@ -175,7 +177,8 @@ public class ChainTemplateService {
             }
             if (step.responsibleRole() == null || !isValidUserRole(step.responsibleRole())) {
                 throw ChainTemplateException.badRequest(
-                        "CHAIN_INVALID_ROLE", "Invalid responsible role: " + step.responsibleRole());
+                        "CHAIN_INVALID_ROLE", "Invalid responsible role: " + step.responsibleRole(),
+                        step.responsibleRole());
             }
         }
         double sumDays = ordered.stream()
@@ -185,7 +188,8 @@ public class ChainTemplateService {
         if (sumDays > template.getTotalDelayDays()) {
             throw ChainTemplateException.badRequest(
                     "CHAIN_DELAY_SUM_EXCEEDED",
-                    "Sum of step delays exceeds total delay days (" + template.getTotalDelayDays() + ")");
+                    "Sum of step delays exceeds total delay days (" + template.getTotalDelayDays() + ")",
+                    template.getTotalDelayDays());
         }
     }
 

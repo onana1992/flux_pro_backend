@@ -83,26 +83,7 @@ public class DataInitializer implements CommandLineRunner {
         seedOrganizationIfMissing("DSI", "Direction des Systèmes d'Information", directorateType, mintp);
 
         Organization dsi = organizationRepository.findByCode("DSI").orElseThrow();
-        userRepository.findByEmail("e.fotso@mintp.cm").ifPresentOrElse(admin -> {
-            boolean changed = false;
-            if (!passwordEncoder.matches("Mintp@2025", admin.getPasswordHash())) {
-                admin.setPasswordHash(passwordEncoder.encode("Mintp@2025"));
-                changed = true;
-            }
-            if (admin.isMustChangePassword()) {
-                admin.setMustChangePassword(false);
-                changed = true;
-            }
-            if (admin.getFailedLoginAttempts() > 0 || admin.getLockedUntil() != null) {
-                admin.setFailedLoginAttempts(0);
-                admin.setLockedUntil(null);
-                changed = true;
-            }
-            if (changed) {
-                userRepository.save(admin);
-                log.info("Seed: restored demo SUPER_ADMIN credentials for e.fotso@mintp.cm");
-            }
-        }, () -> {
+        if (userRepository.findByEmail("e.fotso@mintp.cm").isEmpty()) {
             User admin = new User();
             admin.setStaffNumber("MAT-2014-0006");
             admin.setEmail("e.fotso@mintp.cm");
@@ -117,7 +98,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setActive(true);
             userRepository.save(admin);
             log.info("Seed: SUPER_ADMIN e.fotso@mintp.cm / Mintp@2025");
-        });
+        }
     }
 
     private void seedOrganizationTypes() {

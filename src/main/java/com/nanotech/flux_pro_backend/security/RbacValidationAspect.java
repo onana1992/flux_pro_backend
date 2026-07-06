@@ -5,7 +5,6 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,7 +33,7 @@ public class RbacValidationAspect {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new AccessDeniedException("Authentication required");
+            throw new TranslatableAccessDeniedException("AUTH_REQUIRED", "Authentication required");
         }
 
         Set<String> authorities = authentication.getAuthorities().stream()
@@ -43,8 +42,9 @@ public class RbacValidationAspect {
 
         boolean allowed = Arrays.stream(requiresPermission.value()).anyMatch(authorities::contains);
         if (!allowed) {
-            throw new AccessDeniedException(
-                    "Permission required: " + String.join(", ", requiresPermission.value()));
+            String permissions = String.join(", ", requiresPermission.value());
+            throw new TranslatableAccessDeniedException(
+                    "PERMISSION_REQUIRED", "Permission required: " + permissions, permissions);
         }
         return joinPoint.proceed();
     }

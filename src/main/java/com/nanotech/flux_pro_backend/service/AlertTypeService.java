@@ -45,13 +45,15 @@ public class AlertTypeService {
     @Transactional(readOnly = true)
     public AlertType getByCode(String code) {
         return alertTypeRepository.findByCodeIgnoreCase(code)
-                .orElseThrow(() -> AlertException.notFound("ALERT_TYPE_NOT_FOUND", "Alert type not found: " + code));
+                .orElseThrow(() -> AlertException.notFound(
+                        "ALERT_TYPE_NOT_FOUND_BY_CODE", "Alert type not found: " + code, code));
     }
 
     @Transactional
     public AlertType create(AlertTypeRequest request) {
         if (alertTypeRepository.existsByCodeIgnoreCase(request.code())) {
-            throw AlertException.badRequest("ALERT_TYPE_CODE_EXISTS", "Alert type code already in use: " + request.code());
+            throw AlertException.badRequest(
+                    "ALERT_TYPE_CODE_EXISTS", "Alert type code already in use: " + request.code(), request.code());
         }
         AlertType type = new AlertType();
         type.setCode(request.code().trim().toUpperCase());

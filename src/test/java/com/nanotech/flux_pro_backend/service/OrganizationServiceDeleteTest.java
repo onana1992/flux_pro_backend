@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.service;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
@@ -65,7 +66,7 @@ class OrganizationServiceDeleteTest {
         when(organizationRepository.existsByParentId(id)).thenReturn(true);
 
         assertThatThrownBy(() -> organizationService.delete(id))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(AppException.class)
                 .hasMessageContaining("child entities");
 
         verify(organizationRepository, never()).delete(org);
@@ -83,7 +84,7 @@ class OrganizationServiceDeleteTest {
         when(userRepository.existsByOrganizationId(id)).thenReturn(true);
 
         assertThatThrownBy(() -> organizationService.delete(id))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(AppException.class)
                 .hasMessageContaining("assigned users");
 
         verify(organizationRepository, never()).delete(org);
@@ -95,7 +96,7 @@ class OrganizationServiceDeleteTest {
         when(organizationRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> organizationService.delete(id))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(AppException.class)
                 .hasMessageContaining("not found");
 
         verify(organizationRepository, never()).delete(any(Organization.class));

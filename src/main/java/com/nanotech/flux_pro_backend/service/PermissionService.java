@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.service;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.dto.request.CreatePermissionRequest;
 import com.nanotech.flux_pro_backend.dto.request.UpdatePermissionRequest;
 import com.nanotech.flux_pro_backend.entity.Permission;
@@ -26,13 +27,13 @@ public class PermissionService {
     @Transactional(readOnly = true)
     public Permission getById(UUID id) {
         return permissionRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Permission not found"));
+                .orElseThrow(() -> AppException.notFound("PERMISSION_NOT_FOUND", "Permission not found"));
     }
 
     @Transactional
     public Permission create(CreatePermissionRequest request) {
         if (permissionRepository.existsByName(request.name())) {
-            throw new IllegalArgumentException("Permission already exists");
+            throw AppException.badRequest("PERMISSION_ALREADY_EXISTS", "Permission already exists");
         }
         Permission permission = new Permission();
         permission.setName(request.name());
@@ -47,7 +48,7 @@ public class PermissionService {
         Permission permission = getById(id);
         if (request.name() != null && !request.name().equals(permission.getName())) {
             if (permissionRepository.existsByName(request.name())) {
-                throw new IllegalArgumentException("Permission name already in use");
+                throw AppException.badRequest("PERMISSION_NAME_IN_USE", "Permission name already in use");
             }
             permission.setName(request.name());
         }
@@ -67,7 +68,7 @@ public class PermissionService {
     public void delete(UUID id) {
         Permission permission = getById(id);
         if (permissionRepository.countRoleLinks(id) > 0) {
-            throw new IllegalArgumentException("Permission is assigned to roles");
+            throw AppException.conflict("PERMISSION_ASSIGNED_TO_ROLES", "Permission is assigned to roles");
         }
         permissionRepository.delete(permission);
     }

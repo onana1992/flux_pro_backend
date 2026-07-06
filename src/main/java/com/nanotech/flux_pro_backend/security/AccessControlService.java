@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.security;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.dto.request.UserRequest;
 import com.nanotech.flux_pro_backend.entity.FileEntity;
 import com.nanotech.flux_pro_backend.entity.Organization;
@@ -7,7 +8,6 @@ import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,17 +42,17 @@ public class AccessControlService {
     @Transactional(readOnly = true)
     public void assertCanReadUser(SecurityUser actor, User target) {
         if (!canReadUsers(actor)) {
-            throw new AccessDeniedException("Access denied");
+            throw new TranslatableAccessDeniedException("ACCESS_DENIED", "Access denied");
         }
         if (!organizationScopeService.canAccess(actor, target.getOrganization().getId())) {
-            throw new AccessDeniedException("Access denied to this user");
+            throw new TranslatableAccessDeniedException("ACCESS_DENIED_USER", "Access denied to this user");
         }
     }
 
     @Transactional(readOnly = true)
     public void assertCanWriteUser(SecurityUser actor, UserRequest request, User existing) {
         if (!canWriteUsers(actor)) {
-            throw new AccessDeniedException("Access denied");
+            throw new TranslatableAccessDeniedException("ACCESS_DENIED", "Access denied");
         }
         assertCanAssignRole(actor, request.role(), existing);
         assertOrganizationWritable(actor, request.organizationId());
@@ -64,34 +64,38 @@ public class AccessControlService {
     @Transactional(readOnly = true)
     public void assertCanManageUser(SecurityUser actor, User target) {
         if (!canWriteUsers(actor)) {
-            throw new AccessDeniedException("Access denied");
+            throw new TranslatableAccessDeniedException("ACCESS_DENIED", "Access denied");
         }
         assertCanReadUser(actor, target);
         if (target.getRole() == UserRole.SUPER_ADMIN && actor.getRole() != UserRole.SUPER_ADMIN) {
-            throw new AccessDeniedException("Cannot manage SUPER_ADMIN accounts");
+            throw new TranslatableAccessDeniedException(
+                    "ACCESS_DENIED_SUPER_ADMIN_MANAGE", "Cannot manage SUPER_ADMIN accounts");
         }
     }
 
     public void assertCanAssignRole(SecurityUser actor, UserRole roleToAssign, User existing) {
         if (roleToAssign == UserRole.SUPER_ADMIN && actor.getRole() != UserRole.SUPER_ADMIN) {
-            throw new AccessDeniedException("Cannot assign SUPER_ADMIN role");
+            throw new TranslatableAccessDeniedException(
+                    "ACCESS_DENIED_SUPER_ADMIN_ASSIGN", "Cannot assign SUPER_ADMIN role");
         }
         if (existing != null
                 && existing.getRole() == UserRole.SUPER_ADMIN
                 && actor.getRole() != UserRole.SUPER_ADMIN) {
-            throw new AccessDeniedException("Cannot modify SUPER_ADMIN accounts");
+            throw new TranslatableAccessDeniedException(
+                    "ACCESS_DENIED_SUPER_ADMIN_MODIFY", "Cannot modify SUPER_ADMIN accounts");
         }
     }
 
     @Transactional(readOnly = true)
     public void assertOrganizationWritable(SecurityUser actor, UUID organizationId) {
         Organization org = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+                .orElseThrow(() -> AppException.badRequest("ORGANIZATION_NOT_FOUND", "Organization not found"));
         if (!org.isActive()) {
-            throw new IllegalArgumentException("Organization is inactive");
+            throw AppException.badRequest("ORGANIZATION_INACTIVE", "Organization is inactive");
         }
         if (!organizationScopeService.canAccess(actor, organizationId)) {
-            throw new AccessDeniedException("Access denied to this organization");
+            throw new TranslatableAccessDeniedException(
+                    "ACCESS_DENIED_ORGANIZATION", "Access denied to this organization");
         }
     }
 
@@ -104,14 +108,16 @@ public class AccessControlService {
     @Transactional(readOnly = true)
     public void assertCanAccessOrganization(SecurityUser actor, UUID organizationId) {
         if (!organizationScopeService.canAccess(actor, organizationId)) {
-            throw new AccessDeniedException("Access denied to organization scope");
+            throw new TranslatableAccessDeniedException(
+                    "ACCESS_DENIED_ORGANIZATION_SCOPE", "Access denied to organization scope");
         }
     }
 
     @Transactional(readOnly = true)
     public void assertCanAccessFile(SecurityUser actor, FileEntity file) {
         if (file.getOrganization() == null) {
-            throw new AccessDeniedException("Access denied to organization scope");
+            throw new TranslatableAccessDeniedException(
+                    "ACCESS_DENIED_ORGANIZATION_SCOPE", "Access denied to organization scope");
         }
         assertCanAccessOrganization(actor, file.getOrganization().getId());
     }

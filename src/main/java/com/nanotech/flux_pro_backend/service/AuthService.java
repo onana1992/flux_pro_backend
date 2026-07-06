@@ -12,10 +12,10 @@ import com.nanotech.flux_pro_backend.security.JwtTokenProvider;
 import com.nanotech.flux_pro_backend.security.PasswordValidator;
 import com.nanotech.flux_pro_backend.security.RbacAuthorityService;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
+import com.nanotech.flux_pro_backend.security.TranslatableBadCredentialsException;
+import com.nanotech.flux_pro_backend.security.TranslatableLockedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +44,7 @@ public class AuthService {
 
         if (user == null) {
             loginAuditService.log(null, normalizedEmail, false, request, "UNKNOWN_EMAIL");
-            throw new BadCredentialsException("Invalid email or password");
+            throw new TranslatableBadCredentialsException("AUTH_INVALID_CREDENTIALS", "Invalid email or password");
         }
 
         if (!user.isActive()) {
@@ -55,7 +55,10 @@ public class AuthService {
         if (isLocked(user)) {
             long minutes = ChronoUnit.MINUTES.between(Instant.now(), user.getLockedUntil()) + 1;
             loginAuditService.log(user, normalizedEmail, false, request, "ACCOUNT_LOCKED");
-            throw new LockedException("Account temporarily locked. Try again in " + minutes + " minutes.");
+            throw new TranslatableLockedException(
+                    "AUTH_ACCOUNT_LOCKED_MINUTES",
+                    "Account temporarily locked. Try again in " + minutes + " minutes.",
+                    minutes);
         }
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
@@ -65,7 +68,7 @@ public class AuthService {
             }
             userRepository.save(user);
             loginAuditService.log(user, normalizedEmail, false, request, "INVALID_PASSWORD");
-            throw new BadCredentialsException("Invalid email or password");
+            throw new TranslatableBadCredentialsException("AUTH_INVALID_CREDENTIALS", "Invalid email or password");
         }
 
         user.setFailedLoginAttempts(0);
@@ -79,12 +82,13 @@ public class AuthService {
     @Transactional
     public TokenResponse refresh(String refreshTokenValue) {
         RefreshToken refreshToken = refreshTokenRepository.findByTokenAndRevokedFalse(refreshTokenValue)
-                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+                .orElseThrow(() -> new TranslatableBadCredentialsException(
+                        "AUTH_INVALID_REFRESH_TOKEN", "Invalid refresh token"));
 
         if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
             refreshToken.setRevoked(true);
             refreshTokenRepository.save(refreshToken);
-            throw new BadCredentialsException("Refresh token expired");
+            throw new TranslatableBadCredentialsException("AUTH_REFRESH_EXPIRED", "Refresh token expired");
         }
 
         User user = refreshToken.getUser();
@@ -97,7 +101,7 @@ public class AuthService {
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
             refreshToken.setRevoked(true);
             refreshTokenRepository.save(refreshToken);
-            throw new LockedException("Account temporarily locked");
+            throw new TranslatableLockedException("AUTH_ACCOUNT_LOCKED", "Account temporarily locked");
         }
 
         refreshToken.setRevoked(true);
@@ -117,10 +121,11 @@ public class AuthService {
     public UserProfileResponse changePassword(SecurityUser user, String currentPassword, String newPassword) {
         PasswordValidator.validate(newPassword);
         User entity = userRepository.findById(user.getId())
-                .orElseThrow(() -> new BadCredentialsException("User not found"));
+                .orElseThrow(() -> new TranslatableBadCredentialsException("AUTH_USER_NOT_FOUND", "User not found"));
 
         if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
-            throw new BadCredentialsException("Current password is incorrect");
+            throw new TranslatableBadCredentialsException(
+                    "AUTH_CURRENT_PASSWORD_INCORRECT", "Current password is incorrect");
         }
 
         entity.setPasswordHash(passwordEncoder.encode(newPassword));

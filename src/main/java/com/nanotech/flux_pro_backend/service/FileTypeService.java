@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.service;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.dto.request.FileTypeRequest;
 import com.nanotech.flux_pro_backend.entity.FileType;
 import com.nanotech.flux_pro_backend.repository.ChainTemplateRepository;
@@ -31,19 +32,21 @@ public class FileTypeService {
     @Transactional(readOnly = true)
     public FileType getById(UUID id) {
         return fileTypeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("File type not found"));
+                .orElseThrow(() -> AppException.notFound("FILE_TYPE_NOT_FOUND", "File type not found"));
     }
 
     @Transactional(readOnly = true)
     public FileType getByCode(String code) {
         return fileTypeRepository.findByCodeIgnoreCase(code)
-                .orElseThrow(() -> new IllegalArgumentException("File type not found: " + code));
+                .orElseThrow(() -> AppException.notFound(
+                        "FILE_TYPE_NOT_FOUND_BY_CODE", "File type not found: " + code, code));
     }
 
     @Transactional
     public FileType create(FileTypeRequest request) {
         if (fileTypeRepository.existsByCodeIgnoreCase(request.code())) {
-            throw new IllegalArgumentException("File type code already in use: " + request.code());
+            throw AppException.badRequest(
+                    "FILE_TYPE_CODE_IN_USE", "File type code already in use: " + request.code(), request.code());
         }
         FileType type = new FileType();
         applyRequest(type, request, true);
@@ -54,7 +57,7 @@ public class FileTypeService {
     public FileType update(UUID id, FileTypeRequest request) {
         FileType type = getById(id);
         if (!type.getCode().equalsIgnoreCase(request.code())) {
-            throw new IllegalArgumentException("File type code cannot be changed");
+            throw AppException.badRequest("FILE_TYPE_CODE_IMMUTABLE", "File type code cannot be changed");
         }
         applyRequest(type, request, false);
         return fileTypeRepository.save(type);
@@ -71,7 +74,8 @@ public class FileTypeService {
     public void delete(UUID id) {
         FileType type = getById(id);
         if (chainTemplateRepository.existsByFileTypeCodeIgnoreCase(type.getCode())) {
-            throw new IllegalArgumentException("Cannot delete file type linked to a chain template");
+            throw AppException.conflict(
+                    "FILE_TYPE_LINKED_TO_CHAIN", "Cannot delete file type linked to a chain template");
         }
         fileTypeRepository.delete(type);
     }

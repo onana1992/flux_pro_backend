@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.service;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.dto.request.AssignPermissionsRequest;
 import com.nanotech.flux_pro_backend.dto.request.CreateRoleRequest;
 import com.nanotech.flux_pro_backend.dto.request.UpdateRoleRequest;
@@ -35,13 +36,13 @@ public class RoleService {
     @Transactional(readOnly = true)
     public Role getById(UUID id) {
         return roleRepository.findByIdWithPermissions(id)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+                .orElseThrow(() -> AppException.notFound("ROLE_NOT_FOUND", "Role not found"));
     }
 
     @Transactional
     public Role create(CreateRoleRequest request) {
         if (roleRepository.existsByName(request.name())) {
-            throw new IllegalArgumentException("Role already exists");
+            throw AppException.badRequest("ROLE_ALREADY_EXISTS", "Role already exists");
         }
         Role role = new Role();
         role.setName(request.name());
@@ -57,11 +58,11 @@ public class RoleService {
     public Role update(UUID id, UpdateRoleRequest request) {
         Role role = getById(id);
         if (role.isSystemRole() && request.name() != null && !request.name().equals(role.getName())) {
-            throw new IllegalArgumentException("Cannot rename system role");
+            throw AppException.badRequest("ROLE_SYSTEM_RENAME_FORBIDDEN", "Cannot rename system role");
         }
         if (request.name() != null && !request.name().equals(role.getName())) {
             if (roleRepository.existsByName(request.name())) {
-                throw new IllegalArgumentException("Role name already in use");
+                throw AppException.badRequest("ROLE_NAME_IN_USE", "Role name already in use");
             }
             role.setName(request.name());
         }
@@ -78,10 +79,10 @@ public class RoleService {
     public void delete(UUID id) {
         Role role = getById(id);
         if (role.isSystemRole()) {
-            throw new IllegalArgumentException("Cannot delete system role");
+            throw AppException.badRequest("ROLE_SYSTEM_DELETE_FORBIDDEN", "Cannot delete system role");
         }
         if (roleRepository.countUserLinks(id) > 0) {
-            throw new IllegalArgumentException("Role is assigned to users");
+            throw AppException.conflict("ROLE_ASSIGNED_TO_USERS", "Role is assigned to users");
         }
         roleRepository.delete(role);
     }
@@ -109,7 +110,7 @@ public class RoleService {
     @Transactional
     public void assignRoleToUser(UUID userId, UUID roleId) {
         User user = userRepository.findByIdWithRolesAndOrganization(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> AppException.notFound("USER_NOT_FOUND", "User not found"));
         Role role = getById(roleId);
         boolean alreadyAssigned = user.getRoles().stream().anyMatch(r -> r.getId().equals(roleId));
         if (!alreadyAssigned) {
@@ -121,9 +122,9 @@ public class RoleService {
     @Transactional
     public void revokeRoleFromUser(UUID userId, UUID roleId) {
         User user = userRepository.findByIdWithRolesAndOrganization(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> AppException.notFound("USER_NOT_FOUND", "User not found"));
         if (user.getRoles().size() <= 1 && user.getRoles().stream().anyMatch(r -> r.getId().equals(roleId))) {
-            throw new IllegalArgumentException("User must keep at least one role");
+            throw AppException.badRequest("USER_MUST_KEEP_ONE_ROLE", "User must keep at least one role");
         }
         user.getRoles().removeIf(r -> r.getId().equals(roleId));
         userRepository.save(user);

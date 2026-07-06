@@ -3,8 +3,10 @@ package com.nanotech.flux_pro_backend.converter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nanotech.flux_pro_backend.common.AppException;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import org.springframework.http.HttpStatus;
 
 import java.util.Map;
 
@@ -22,7 +24,8 @@ public class JsonMapConverter implements AttributeConverter<Map<String, Object>,
         try {
             return MAPPER.writeValueAsString(attribute);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Cannot serialize metadata JSON", e);
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST, "METADATA_JSON_SERIALIZE_FAILED", "Cannot serialize metadata JSON", e);
         }
     }
 
@@ -34,7 +37,8 @@ public class JsonMapConverter implements AttributeConverter<Map<String, Object>,
         try {
             return MAPPER.readValue(dbData, MAP_TYPE);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Cannot deserialize metadata JSON", e);
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST, "METADATA_JSON_DESERIALIZE_FAILED", "Cannot deserialize metadata JSON", e);
         }
     }
 }

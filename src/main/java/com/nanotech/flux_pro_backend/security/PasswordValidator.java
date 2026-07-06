@@ -1,5 +1,7 @@
 package com.nanotech.flux_pro_backend.security;
 
+import com.nanotech.flux_pro_backend.common.AppException;
+
 import java.util.regex.Pattern;
 
 public final class PasswordValidator {
@@ -12,8 +14,10 @@ public final class PasswordValidator {
 
     public static void validate(String password) {
         if (password == null || !POLICY.matcher(password).matches()) {
-            throw new IllegalArgumentException(
-                    "Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial");
+            throw AppException.badRequest(
+                    "AUTH_PASSWORD_POLICY",
+                    "Password must be at least 8 characters long and contain an uppercase letter, "
+                            + "a digit and a special character");
         }
     }
 }

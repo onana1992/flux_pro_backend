@@ -66,7 +66,7 @@ public class NotificationController {
     @RequiresPermission(RbacPermissions.FILES_READ)
     public List<AlertResponse> listForFile(@PathVariable UUID fileId) {
         FileEntity file = fileRepository.findByIdWithDetails(fileId)
-                .orElseThrow(() -> FileException.notFound("File not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_NOT_FOUND", "File not found"));
         accessControlService.assertCanAccessFile(securityUtils.currentUser(), file);
         return notificationService.listForFile(fileId).stream().map(AlertMapper::toResponse).toList();
     }

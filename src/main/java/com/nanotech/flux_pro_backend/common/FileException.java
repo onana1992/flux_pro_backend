@@ -4,30 +4,32 @@ import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public class FileException extends RuntimeException {
+public class FileException extends RuntimeException implements TranslatableError {
 
     private final HttpStatus status;
     private final String code;
+    private final Object[] args;
 
-    public FileException(HttpStatus status, String code, String message) {
+    public FileException(HttpStatus status, String code, String message, Object... args) {
         super(message);
         this.status = status;
         this.code = code;
+        this.args = args;
     }
 
-    public static FileException badRequest(String code, String message) {
-        return new FileException(HttpStatus.BAD_REQUEST, code, message);
+    public static FileException badRequest(String code, String message, Object... args) {
+        return new FileException(HttpStatus.BAD_REQUEST, code, message, args);
     }
 
-    public static FileException forbidden(String message) {
-        return new FileException(HttpStatus.FORBIDDEN, "FILE_ACCESS_DENIED", message);
+    public static FileException forbidden(String code, String message, Object... args) {
+        return new FileException(HttpStatus.FORBIDDEN, code, message, args);
     }
 
-    public static FileException conflict(String code, String message) {
-        return new FileException(HttpStatus.CONFLICT, code, message);
+    public static FileException conflict(String code, String message, Object... args) {
+        return new FileException(HttpStatus.CONFLICT, code, message, args);
     }
 
-    public static FileException notFound(String message) {
-        return new FileException(HttpStatus.NOT_FOUND, "FILE_NOT_FOUND", message);
+    public static FileException notFound(String code, String message, Object... args) {
+        return new FileException(HttpStatus.NOT_FOUND, code, message, args);
     }
 }

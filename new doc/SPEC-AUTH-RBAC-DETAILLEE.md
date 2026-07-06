@@ -4,7 +4,7 @@
 **Module :** Authentification (AUTH) + Contrôle d'accès basé sur les rôles et permissions (RBAC)
 **Version :** 1.0
 **Date :** 5 juillet 2026
-**Source :** Rétro-documentation à partir du code source réellement implémenté (`security/`, `service/`, `controller/`, `entity/` du backend Spring Boot)
+**Source :** Rétro-documentation à partir du code source réellement implémenté (`security/`, `service/`, `controller/`, `entity/` du backend Spring Boot) ; le cas UC-02bis documente en complément un comportement du frontend Next.js (`flux-pro-front`)
 
 ---
 
@@ -221,6 +221,17 @@ Trace immuable de chaque tentative de connexion, réussie ou échouée.
 | Déroulement nominal | 1. `POST /api/auth/refresh` avec `refreshToken`.<br>2. Le système vérifie : jeton trouvé et non révoqué, non expiré, compte actif, compte non verrouillé.<br>3. Révoque l'ancien jeton (rotation), en émet un nouveau, régénère l'access token. |
 | Exemple | Refresh token expiré → `401 Invalid refresh token` / `Refresh token expired` |
 | Règles (code) | RG-AUTH-04, RG-AUTH-06 — `AuthService.refresh()` |
+
+### UC-02bis — Expiration de session côté client (SPA)
+
+| Champ | Détail |
+|---|---|
+| Acteur | Client web (frontend Next.js) d'un utilisateur précédemment authentifié |
+| Objectif | Réagir proprement lorsque l'access token **et** le refresh token sont tous deux invalides (expirés, révoqués), sans laisser l'utilisateur face à des erreurs techniques silencieuses |
+| Préconditions | Un appel API authentifié (avec access token) reçoit `401` |
+| Déroulement nominal | 1. `apiFetch` intercepte le `401` et tente un rafraîchissement via `POST /api/auth/refresh` (UC-02).<br>2. Si le rafraîchissement échoue (refresh token absent, expiré ou révoqué → `401`), le client purge immédiatement `localStorage` (access token, refresh token, profil) et notifie `AuthProvider` via un bus d'événements interne.<br>3. `AuthProvider` met l'utilisateur courant à `null` en mémoire, ce qui déclenche la redirection vers `/login` (garde `RequireAuth`, déjà appliquée sur toutes les pages protégées).<br>4. La page de connexion affiche un message « Votre session a expiré. Veuillez vous reconnecter. » une seule fois, puis réinitialise l'indicateur. |
+| Exemple | Un utilisateur laisse un onglet ouvert plus de 7 jours (durée de vie du refresh token) ; à sa prochaine action, il est automatiquement ramené sur `/login` avec le message d'expiration, sans avoir à interpréter une erreur réseau brute |
+| Règles (code) | RG-AUTH-10 — `api.ts` (`apiFetch`), `session-events.ts`, `AuthProvider.tsx`, `RequireAuth.tsx` (frontend) |
 
 ### UC-03 — Déconnexion
 
@@ -446,6 +457,7 @@ Trace immuable de chaque tentative de connexion, réussie ou échouée.
 | RG-AUTH-07 | Un changement de mot de passe (volontaire ou réinitialisation admin) révoque immédiatement tous les refresh tokens actifs de l'utilisateur. | `AuthService.changePassword()`, `UserService.resetPassword()` |
 | RG-AUTH-08 | Toute tentative de connexion, réussie ou échouée, est journalisée avec l'email saisi, l'IP, le user-agent et le motif d'échec le cas échéant. | `LoginAuditService.log()` |
 | RG-AUTH-09 | L'email est systématiquement normalisé (minuscule, sans espaces superflus) avant toute comparaison ou stockage. | `AuthService`, `UserService` |
+| RG-AUTH-10 | Côté client (SPA), un `401` non récupérable (access token expiré **et** rafraîchissement impossible) purge immédiatement la session locale, affiche une notification « session expirée » sur `/login` et y redirige l'utilisateur ; ce comportement ne se déclenche que si une requête portait effectivement un token (pas de faux positif sur un appel anonyme). | `api.ts` (`apiFetch`), `session-events.ts`, `AuthProvider.tsx` (frontend) |
 | RG-RBAC-01 | Toute action protégée applique une double garde cumulative : la permission portée par le JWT (`@RequiresPermission`) **et** le contrôle de périmètre organisationnel en service. | `RbacValidationAspect`, `AccessControlService` |
 | RG-RBAC-02 | Seul un `SUPER_ADMIN` peut créer, modifier ou attribuer le rôle `SUPER_ADMIN` à un utilisateur. | `AccessControlService.assertCanAssignRole()` |
 | RG-RBAC-03 | Un `BUSINESS_ADMIN` ne peut jamais lire, modifier, désactiver, réactiver, déverrouiller ou réinitialiser le mot de passe d'un compte `SUPER_ADMIN`, quel que soit le périmètre organisationnel. | `AccessControlService.assertCanManageUser()` |

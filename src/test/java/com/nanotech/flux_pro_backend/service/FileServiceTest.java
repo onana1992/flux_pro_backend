@@ -164,7 +164,7 @@ class FileServiceTest {
         assertThatThrownBy(() -> fileService.resolveTemplate("MARCHE-SMP", FilePriority.NORMAL))
                 .isInstanceOf(FileException.class)
                 .extracting(ex -> ((FileException) ex).getCode())
-                .isEqualTo("FILE_TEMPLATE_NOT_FOUND");
+                .isEqualTo("FILE_TEMPLATE_NOT_FOUND_BY_TYPE");
     }
 
     private void stubActiveFileType(String code) {

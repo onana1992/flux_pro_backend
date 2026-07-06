@@ -62,7 +62,7 @@ public class PassageService {
         FileEntity file = loadFile(fileId, actor);
         if (file.getStatus() != FileStatus.IN_PROGRESS && file.getStatus() != FileStatus.ON_HOLD) {
             throw FileException.conflict(
-                    "FILE_STATUS_TRANSITION_INVALID", "Chain can only be initialized on active files");
+                    "FILE_CHAIN_INIT_STATUS_INVALID", "Chain can only be initialized on active files");
         }
         if (filePassageRepository.existsByFileId(fileId)) {
             throw FileException.conflict("PASSAGE_CHAIN_EXISTS", "Chain already initialized for this file");
@@ -90,8 +90,8 @@ public class PassageService {
         for (ChainStepTemplate step : steps) {
             if (!assignments.containsKey(step.getId())) {
                 throw FileException.badRequest(
-                        "PASSAGE_ASSIGNMENT_INCOMPLETE",
-                        "Missing responsible user for step: " + step.getLabel());
+                        "PASSAGE_ASSIGNMENT_MISSING_FOR_STEP",
+                        "Missing responsible user for step: " + step.getLabel(), step.getLabel());
             }
         }
 
@@ -248,7 +248,8 @@ public class PassageService {
         assertInProgress(file);
         FilePassage passage = loadPassage(fileId, passageId);
         if (passage.getStatus() != PassageStatus.IN_PROGRESS) {
-            throw FileException.conflict("PASSAGE_STATUS_INVALID", "Only in-progress passages can be suspended");
+            throw FileException.conflict(
+                    "PASSAGE_NOT_IN_PROGRESS_FOR_SUSPEND", "Only in-progress passages can be suspended");
         }
         assertCanAct(passage, actor);
 
@@ -271,7 +272,7 @@ public class PassageService {
         FileEntity file = loadFile(fileId, actor);
         FilePassage passage = loadPassage(fileId, passageId);
         if (passage.getStatus() != PassageStatus.SUSPENDED) {
-            throw FileException.conflict("PASSAGE_STATUS_INVALID", "Passage is not suspended");
+            throw FileException.conflict("PASSAGE_NOT_SUSPENDED", "Passage is not suspended");
         }
         assertCanAct(passage, actor);
 
@@ -302,9 +303,9 @@ public class PassageService {
         assertCanAct(passage, actor);
 
         User newResponsible = userRepository.findByIdWithOrganization(request.responsibleUserId())
-                .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_INVALID", "Responsible user not found"));
+                .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_NOT_FOUND", "Responsible user not found"));
         if (!newResponsible.isActive()) {
-            throw FileException.badRequest("PASSAGE_USER_INVALID", "Responsible user is inactive");
+            throw FileException.badRequest("PASSAGE_USER_INACTIVE", "Responsible user is inactive");
         }
         accessControlService.assertCanAccessOrganization(actor, newResponsible.getOrganization().getId());
 
@@ -348,9 +349,9 @@ public class PassageService {
         User responsible;
         if (nextResponsibleUserId != null) {
             responsible = userRepository.findByIdWithOrganization(nextResponsibleUserId)
-                    .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_INVALID", "Responsible user not found"));
+                    .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_NOT_FOUND", "Responsible user not found"));
             if (!responsible.isActive()) {
-                throw FileException.badRequest("PASSAGE_USER_INVALID", "Responsible user is inactive");
+                throw FileException.badRequest("PASSAGE_USER_INACTIVE", "Responsible user is inactive");
             }
         } else if (passage.getResponsibleUser() != null) {
             responsible = passage.getResponsibleUser();
@@ -383,9 +384,9 @@ public class PassageService {
                 continue;
             }
             User user = userRepository.findByIdWithOrganization(userId)
-                    .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_INVALID", "Responsible user not found"));
+                    .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_NOT_FOUND", "Responsible user not found"));
             if (!user.isActive()) {
-                throw FileException.badRequest("PASSAGE_USER_INVALID", "Responsible user is inactive");
+                throw FileException.badRequest("PASSAGE_USER_INACTIVE", "Responsible user is inactive");
             }
             usersById.put(userId, user);
         }
@@ -422,14 +423,14 @@ public class PassageService {
 
     private FileEntity loadFile(UUID fileId, SecurityUser actor) {
         FileEntity file = fileRepository.findByIdWithDetails(fileId)
-                .orElseThrow(() -> FileException.notFound("File not found"));
+                .orElseThrow(() -> FileException.notFound("FILE_NOT_FOUND", "File not found"));
         accessControlService.assertCanAccessFile(actor, file);
         return file;
     }
 
     private FilePassage loadPassage(UUID fileId, UUID passageId) {
         return filePassageRepository.findByIdAndFileIdWithDetails(passageId, fileId)
-                .orElseThrow(() -> FileException.notFound("Passage not found"));
+                .orElseThrow(() -> FileException.notFound("PASSAGE_NOT_FOUND", "Passage not found"));
     }
 
     private FilePassage loadCurrentPassage(UUID fileId, SecurityUser actor) {
@@ -437,24 +438,24 @@ public class PassageService {
         return filePassageRepository
                 .findByFileIdAndStatusWithDetails(fileId, PassageStatus.IN_PROGRESS)
                 .or(() -> filePassageRepository.findByFileIdAndStatusWithDetails(fileId, PassageStatus.SUSPENDED))
-                .orElseThrow(() -> FileException.notFound("No active passage for this file"));
+                .orElseThrow(() -> FileException.notFound("PASSAGE_ACTIVE_NOT_FOUND", "No active passage for this file"));
     }
 
     private void assertInProgress(FileEntity file) {
         if (file.getStatus() != FileStatus.IN_PROGRESS && file.getStatus() != FileStatus.ON_HOLD) {
-            throw FileException.conflict("FILE_STATUS_TRANSITION_INVALID", "File is not in an active workflow state");
+            throw FileException.conflict("FILE_NOT_ACTIVE_WORKFLOW", "File is not in an active workflow state");
         }
     }
 
     private void assertActivePassage(FilePassage passage) {
         if (passage.getStatus() != PassageStatus.IN_PROGRESS) {
-            throw FileException.conflict("PASSAGE_STATUS_INVALID", "Passage is not in progress");
+            throw FileException.conflict("PASSAGE_NOT_IN_PROGRESS", "Passage is not in progress");
         }
     }
 
     private void assertCanAct(FilePassage passage, SecurityUser actor) {
         if (!passageAuthorityService.canActOnPassage(actor, passage)) {
-            throw FileException.forbidden("You are not allowed to act on this passage");
+            throw FileException.forbidden("PASSAGE_ACCESS_DENIED", "You are not allowed to act on this passage");
         }
     }
 }

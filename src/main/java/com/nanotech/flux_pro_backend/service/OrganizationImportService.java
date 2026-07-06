@@ -2,6 +2,7 @@ package com.nanotech.flux_pro_backend.service;
 
 import com.nanotech.flux_pro_backend.common.CsvUtils;
 import com.nanotech.flux_pro_backend.common.ImportResult;
+import com.nanotech.flux_pro_backend.common.MessageTranslator;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
@@ -23,6 +24,13 @@ public class OrganizationImportService {
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationTypeRepository organizationTypeRepository;
+    private final MessageTranslator messageTranslator;
+
+    private String lineError(int line, String key, String fallback, Object... args) {
+        String message = messageTranslator.translate(key, args, fallback);
+        return messageTranslator.translate(
+                "import.lineError", new Object[] {line, message}, "Line " + line + ": " + message);
+    }
 
     @Transactional
     public ImportResult importCsv(MultipartFile file) throws IOException {
@@ -43,12 +51,12 @@ public class OrganizationImportService {
             try {
                 String code = row.get("code");
                 if (code == null || code.isBlank()) {
-                    errors.add("Line " + line + ": missing code");
+                    errors.add(lineError(line, "import.org.missingCode", "missing code"));
                     continue;
                 }
                 String typeCode = row.get("type");
                 if (typeCode == null || typeCode.isBlank()) {
-                    errors.add("Line " + line + ": missing type");
+                    errors.add(lineError(line, "import.org.missingType", "missing type"));
                     continue;
                 }
                 OrganizationType orgType = typeCache.get(typeCode);
@@ -56,11 +64,11 @@ public class OrganizationImportService {
                     orgType = organizationTypeRepository.findByCode(typeCode).orElse(null);
                 }
                 if (orgType == null) {
-                    errors.add("Line " + line + ": unknown type " + typeCode);
+                    errors.add(lineError(line, "import.org.unknownType", "unknown type {0}", typeCode));
                     continue;
                 }
                 if (!orgType.isActive()) {
-                    errors.add("Line " + line + ": inactive type " + typeCode);
+                    errors.add(lineError(line, "import.org.inactiveType", "inactive type {0}", typeCode));
                     continue;
                 }
                 typeCache.put(typeCode, orgType);
@@ -82,13 +90,14 @@ public class OrganizationImportService {
                         parent = organizationRepository.findByCode(parentCode).orElse(null);
                     }
                     if (parent == null) {
-                        errors.add("Line " + line + ": parent not found " + parentCode);
+                        errors.add(lineError(line, "import.org.parentNotFound", "parent not found {0}", parentCode));
                         continue;
                     }
                     org.setParent(parent);
                 } else {
                     if (!orgType.isAllowsRoot()) {
-                        errors.add("Line " + line + ": type " + typeCode + " requires a parent");
+                        errors.add(lineError(
+                                line, "import.org.parentRequired", "type {0} requires a parent", typeCode));
                         continue;
                     }
                     org.setParent(null);
@@ -102,7 +111,9 @@ public class OrganizationImportService {
                     updated++;
                 }
             } catch (Exception e) {
-                errors.add("Line " + line + ": " + e.getMessage());
+                String message = messageTranslator.translate(e);
+                errors.add(messageTranslator.translate(
+                        "import.lineError", new Object[] {line, message}, "Line " + line + ": " + message));
             }
         }
         return new ImportResult(created, updated, errors);

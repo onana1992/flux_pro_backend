@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.security;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -14,6 +15,6 @@ class PasswordValidatorTest {
 
     @Test
     void rejectsWeakPassword() {
-        assertThrows(IllegalArgumentException.class, () -> PasswordValidator.validate("password"));
+        assertThrows(AppException.class, () -> PasswordValidator.validate("password"));
     }
 }

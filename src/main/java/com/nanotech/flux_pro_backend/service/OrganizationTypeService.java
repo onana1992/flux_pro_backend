@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.service;
 
+import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.dto.request.OrganizationTypeRequest;
 import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.mapper.DtoMapper;
@@ -44,19 +45,22 @@ public class OrganizationTypeService {
     @Transactional(readOnly = true)
     public OrganizationType getById(UUID id) {
         return organizationTypeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Organization type not found"));
+                .orElseThrow(() -> AppException.notFound("ORGANIZATION_TYPE_NOT_FOUND", "Organization type not found"));
     }
 
     @Transactional(readOnly = true)
     public OrganizationType getByCode(String code) {
         return organizationTypeRepository.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("Organization type not found: " + code));
+                .orElseThrow(() -> AppException.notFound(
+                        "ORGANIZATION_TYPE_NOT_FOUND_BY_CODE", "Organization type not found: " + code, code));
     }
 
     @Transactional
     public OrganizationType create(OrganizationTypeRequest request) {
         if (organizationTypeRepository.existsByCode(request.code())) {
-            throw new IllegalArgumentException("Organization type code already in use: " + request.code());
+            throw AppException.badRequest(
+                    "ORGANIZATION_TYPE_CODE_IN_USE",
+                    "Organization type code already in use: " + request.code(), request.code());
         }
         OrganizationType type = new OrganizationType();
         applyRequest(type, request, true);
@@ -67,7 +71,8 @@ public class OrganizationTypeService {
     public OrganizationType update(UUID id, OrganizationTypeRequest request) {
         OrganizationType type = getById(id);
         if (!type.getCode().equals(request.code())) {
-            throw new IllegalArgumentException("Organization type code cannot be changed");
+            throw AppException.badRequest(
+                    "ORGANIZATION_TYPE_CODE_IMMUTABLE", "Organization type code cannot be changed");
         }
         applyRequest(type, request, false);
         return organizationTypeRepository.save(type);
@@ -77,7 +82,8 @@ public class OrganizationTypeService {
     public OrganizationType deactivate(UUID id) {
         OrganizationType type = getById(id);
         if (organizationRepository.existsByOrganizationTypeIdAndActiveTrue(id)) {
-            throw new IllegalStateException("Cannot deactivate type used by active organizations");
+            throw AppException.conflict(
+                    "ORGANIZATION_TYPE_IN_USE_ACTIVE", "Cannot deactivate type used by active organizations");
         }
         type.setActive(false);
         return organizationTypeRepository.save(type);
@@ -87,7 +93,7 @@ public class OrganizationTypeService {
     public void delete(UUID id) {
         OrganizationType type = getById(id);
         if (organizationRepository.existsByOrganizationTypeId(id)) {
-            throw new IllegalArgumentException("Cannot delete type used by organizations");
+            throw AppException.conflict("ORGANIZATION_TYPE_IN_USE", "Cannot delete type used by organizations");
         }
         organizationTypeRepository.delete(type);
     }
