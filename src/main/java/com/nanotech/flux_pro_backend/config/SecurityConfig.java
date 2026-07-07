@@ -1,6 +1,7 @@
 package com.nanotech.flux_pro_backend.config;
 
 import com.nanotech.flux_pro_backend.security.AccountInactiveException;
+import com.nanotech.flux_pro_backend.security.CustomAuthenticationEntryPoint;
 import com.nanotech.flux_pro_backend.security.JwtAuthenticationFilter;
 import com.nanotech.flux_pro_backend.security.MustChangePasswordFilter;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final MustChangePasswordFilter mustChangePasswordFilter;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -43,6 +45,11 @@ public class SecurityConfig {
                 })
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Sans ce point d'entrée explicite, Spring Security répond 403 (et non 401)
+                // pour toute requête non authentifiée (ex. JWT expiré après inactivité),
+                // ce qui empêche le frontend de déclencher le rafraîchissement de session.
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         .anyRequest().authenticated())
