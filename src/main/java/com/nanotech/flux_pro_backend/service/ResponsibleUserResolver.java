@@ -32,8 +32,12 @@ public class ResponsibleUserResolver {
         }
         UUID fileOrgId = file.getOrganization().getId();
         return candidates.stream()
-                .filter(u -> u.getOrganization().getId().equals(fileOrgId))
+                .filter(u -> u.getOrganization().getId().equals(fileOrgId) && u.isOrganizationHead())
                 .findFirst()
+                .or(() -> candidates.stream()
+                        .filter(u -> u.getOrganization().getId().equals(fileOrgId))
+                        .findFirst())
+                .or(() -> candidates.stream().filter(User::isOrganizationHead).findFirst())
                 .orElse(candidates.get(0));
     }
 

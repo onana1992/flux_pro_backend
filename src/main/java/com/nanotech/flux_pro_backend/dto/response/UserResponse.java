@@ -16,6 +16,7 @@ public record UserResponse(
         OrganizationSummaryResponse organization,
         String jobTitle,
         boolean active,
+        boolean organizationHead,
         boolean mustChangePassword,
         List<RoleSummaryResponse> roles) {
 }

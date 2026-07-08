@@ -64,6 +64,9 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(nullable = false)
+    private boolean organizationHead = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "substitute_id")
     private User substitute;

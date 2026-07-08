@@ -142,6 +142,7 @@ public class UserService {
         User user = findOrThrowWithOrg(id);
         accessControlService.assertCanManageUser(actor, user);
         user.setActive(false);
+        user.setOrganizationHead(false);
         refreshTokenRepository.revokeAllByUserId(id);
         return DtoMapper.toResponse(userRepository.save(user));
     }
@@ -221,6 +222,11 @@ public class UserService {
                 user.setOrganization(org);
                 user.setJobTitle(row.getOrDefault("fonction", row.getOrDefault("service", "")));
                 user.setActive(Boolean.parseBoolean(row.getOrDefault("actif", "true")));
+                boolean organizationHead = Boolean.parseBoolean(row.getOrDefault("chef_organisation", "false"));
+                if (organizationHead) {
+                    userRepository.clearOrganizationHeadForOrganization(org.getId(), user.getId());
+                }
+                user.setOrganizationHead(organizationHead);
 
                 if (isNew) {
                     user.setPasswordHash(passwordEncoder.encode(defaultPassword));
@@ -265,6 +271,16 @@ public class UserService {
         user.setOrganization(org);
         user.setJobTitle(request.jobTitle());
         user.setActive(request.active());
+        applyOrganizationHead(user, org, request.organizationHead());
+    }
+
+    private void applyOrganizationHead(User user, Organization org, boolean organizationHead) {
+        if (!organizationHead) {
+            user.setOrganizationHead(false);
+            return;
+        }
+        userRepository.clearOrganizationHeadForOrganization(org.getId(), user.getId());
+        user.setOrganizationHead(true);
     }
 
     private void validateUnique(String staffNumber, String email, UUID excludeId) {

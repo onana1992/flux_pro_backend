@@ -103,6 +103,7 @@ public final class DtoMapper {
                 toSummary(user.getOrganization()),
                 user.getJobTitle(),
                 user.isActive(),
+                user.isOrganizationHead(),
                 user.isMustChangePassword(),
                 roles);
     }
