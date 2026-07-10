@@ -7,6 +7,7 @@ public record FilePassageCircuitResponse(
         String templateName,
         Integer currentStepOrder,
         CurrentHolderResponse currentHolder,
+        List<CurrentHolderResponse> currentHolders,
         List<PassageResponse> passages
 ) {
 }

@@ -24,7 +24,7 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
             LEFT JOIN FETCH p.responsibleUser ru
             LEFT JOIN FETCH ru.organization
             WHERE p.file.id = :fileId
-            ORDER BY p.stepOrder ASC
+            ORDER BY p.stepOrder ASC, p.chainStepTemplate.label ASC
             """)
     List<FilePassage> findByFileIdWithDetails(@Param("fileId") UUID fileId);
 
@@ -45,6 +45,17 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
             WHERE p.file.id = :fileId AND p.status = :status
             """)
     Optional<FilePassage> findByFileIdAndStatusWithDetails(
+            @Param("fileId") UUID fileId, @Param("status") PassageStatus status);
+
+    @Query("""
+            SELECT p FROM FilePassage p
+            JOIN FETCH p.chainStepTemplate
+            LEFT JOIN FETCH p.responsibleUser ru
+            LEFT JOIN FETCH ru.organization
+            WHERE p.file.id = :fileId AND p.status = :status
+            ORDER BY p.stepOrder ASC, p.chainStepTemplate.label ASC
+            """)
+    List<FilePassage> findAllByFileIdAndStatusWithDetails(
             @Param("fileId") UUID fileId, @Param("status") PassageStatus status);
 
     /**

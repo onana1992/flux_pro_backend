@@ -156,34 +156,49 @@ public class ChainTemplateService {
             throw ChainTemplateException.badRequest(
                     "CHAIN_STEP_MIN_COUNT", "At least two chain steps are required");
         }
-        List<ChainStepTemplateRequest> ordered = steps.stream()
-                .sorted(Comparator.comparingInt(ChainStepTemplateRequest::stepOrder))
-                .toList();
-        for (int i = 0; i < ordered.size(); i++) {
-            if (ordered.get(i).stepOrder() != i + 1) {
+        List<Integer> stages = PassageStageHelper.distinctStagesFromRequests(steps);
+        for (int i = 0; i < stages.size(); i++) {
+            if (stages.get(i) != i + 1) {
                 throw ChainTemplateException.badRequest(
-                        "CHAIN_STEP_ORDER_GAP", "Chain step orders must be consecutive from 1 to N");
+                        "CHAIN_STEP_ORDER_GAP", "Chain stage orders must be consecutive from 1 to N");
             }
         }
-        long closureCount = ordered.stream().filter(ChainStepTemplateRequest::closureStep).count();
+        long closureCount = steps.stream().filter(ChainStepTemplateRequest::closureStep).count();
         if (closureCount != 1) {
             throw ChainTemplateException.badRequest(
                     "CHAIN_CLOSURE_STEP_INVALID", "Exactly one closure step is required");
         }
-        for (ChainStepTemplateRequest step : ordered) {
-            if (step.closureStep() && step.delayValue() != 0) {
-                throw ChainTemplateException.badRequest(
-                        "CHAIN_CLOSURE_DELAY_INVALID", "Closure step must have zero delay");
-            }
+        ChainStepTemplateRequest closure = steps.stream()
+                .filter(ChainStepTemplateRequest::closureStep)
+                .findFirst()
+                .orElseThrow();
+        if (closure.delayValue() != 0) {
+            throw ChainTemplateException.badRequest(
+                    "CHAIN_CLOSURE_DELAY_INVALID", "Closure step must have zero delay");
+        }
+        int lastStage = stages.get(stages.size() - 1);
+        long closureStageCount = steps.stream()
+                .filter(s -> s.stepOrder() == lastStage)
+                .count();
+        if (closure.stepOrder() != lastStage || closureStageCount != 1) {
+            throw ChainTemplateException.badRequest(
+                    "CHAIN_PARALLEL_CLOSURE_INVALID",
+                    "Closure step must be the only step in the last stage");
+        }
+        for (ChainStepTemplateRequest step : steps) {
             if (step.responsibleRole() == null || !isValidUserRole(step.responsibleRole())) {
                 throw ChainTemplateException.badRequest(
                         "CHAIN_INVALID_ROLE", "Invalid responsible role: " + step.responsibleRole(),
                         step.responsibleRole());
             }
         }
-        double sumDays = ordered.stream()
-                .filter(s -> !s.closureStep())
-                .mapToDouble(this::toWorkingDays)
+        double sumDays = stages.stream()
+                .filter(stage -> stage != lastStage)
+                .mapToDouble(stage -> steps.stream()
+                        .filter(s -> s.stepOrder() == stage)
+                        .mapToDouble(this::toWorkingDays)
+                        .max()
+                        .orElse(0))
                 .sum();
         if (sumDays > template.getTotalDelayDays()) {
             throw ChainTemplateException.badRequest(

@@ -75,7 +75,8 @@ public class PassageService {
         }
 
         List<ChainStepTemplate> steps = template.getSteps().stream()
-                .sorted(Comparator.comparingInt(ChainStepTemplate::getStepOrder))
+                .sorted(Comparator.comparingInt(ChainStepTemplate::getStepOrder)
+                        .thenComparing(ChainStepTemplate::getLabel, String.CASE_INSENSITIVE_ORDER))
                 .toList();
         if (steps.isEmpty()) {
             throw FileException.badRequest("PASSAGE_CHAIN_EMPTY", "Chain template has no steps");
@@ -151,7 +152,9 @@ public class PassageService {
             Map<UUID, UUID> assignments,
             Map<UUID, User> usersById) {
         Instant now = Instant.now();
-        boolean first = true;
+        Integer firstStage = PassageStageHelper.distinctStagesFromSteps(steps).stream()
+                .findFirst()
+                .orElseThrow();
         for (ChainStepTemplate step : steps) {
             User responsible = usersById.get(assignments.get(step.getId()));
             FilePassage passage = new FilePassage();
@@ -159,11 +162,10 @@ public class PassageService {
             passage.setChainStepTemplate(step);
             passage.setStepOrder(step.getStepOrder());
             passage.setResponsibleUser(responsible);
-            if (first) {
+            if (step.getStepOrder() == firstStage) {
                 passage.setStatus(PassageStatus.IN_PROGRESS);
                 passage.setReceivedAt(now);
                 passage.setDueAt(delaiService.calculateDueDate(now, step.getDelayValue(), step.getDelayUnit()));
-                first = false;
             } else {
                 passage.setStatus(PassageStatus.PENDING);
             }
@@ -191,20 +193,23 @@ public class PassageService {
         completePassage(passage, request.comment(), now);
 
         ChainStepTemplate currentStep = passage.getChainStepTemplate();
+        List<FilePassage> allPassages = filePassageRepository.findByFileIdWithDetails(fileId);
+        int currentStage = passage.getStepOrder();
+
         if (currentStep.isClosureStep()) {
-            return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+            return PassageMapper.toCircuit(file, allPassages, delaiService);
         }
 
-        FilePassage next = filePassageRepository.findByFileIdWithDetails(fileId).stream()
-                .filter(p -> p.getStepOrder() > passage.getStepOrder() && p.getStatus() == PassageStatus.PENDING)
-                .min(Comparator.comparingInt(FilePassage::getStepOrder))
-                .orElse(null);
-
-        if (next == null) {
-            return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+        if (!PassageStageHelper.isStageComplete(allPassages, currentStage)) {
+            return PassageMapper.toCircuit(file, allPassages, delaiService);
         }
 
-        activatePassage(file, next, request.nextResponsibleUserId(), now);
+        Integer nextStage = PassageStageHelper.nextStage(allPassages, currentStage);
+        if (nextStage == null) {
+            return PassageMapper.toCircuit(file, allPassages, delaiService);
+        }
+
+        activateStage(file, allPassages, nextStage, request.nextResponsibleUserId(), now);
         return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
     }
 
@@ -217,10 +222,12 @@ public class PassageService {
         assertActivePassage(passage);
         assertCanAct(passage, actor);
 
-        FilePassage previous = filePassageRepository.findByFileIdWithDetails(fileId).stream()
-                .filter(p -> p.getStepOrder() < passage.getStepOrder())
-                .max(Comparator.comparingInt(FilePassage::getStepOrder))
-                .orElseThrow(() -> FileException.badRequest("PASSAGE_RETURN_FORBIDDEN", "No previous passage"));
+        List<FilePassage> allPassages = filePassageRepository.findByFileIdWithDetails(fileId);
+        int currentStage = passage.getStepOrder();
+        if (currentStage <= 1) {
+            throw FileException.badRequest("PASSAGE_RETURN_FORBIDDEN", "No previous passage");
+        }
+        int previousStage = currentStage - 1;
 
         Instant now = Instant.now();
         passage.setStatus(PassageStatus.RETURNED);
@@ -228,15 +235,8 @@ public class PassageService {
         passage.setTransmittedAt(now);
         filePassageRepository.save(passage);
 
-        previous.setStatus(PassageStatus.IN_PROGRESS);
-        previous.setReceivedAt(now);
-        previous.setTransmittedAt(null);
-        previous.setReturnReason(null);
-        previous.setDueAt(delaiService.calculateDueDate(
-                now,
-                previous.getChainStepTemplate().getDelayValue(),
-                previous.getChainStepTemplate().getDelayUnit()));
-        filePassageRepository.save(previous);
+        resetStageToPending(allPassages, currentStage);
+        reactivateStage(allPassages, previousStage, now);
 
         return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
     }
@@ -341,10 +341,55 @@ public class PassageService {
         filePassageRepository.save(passage);
     }
 
-    private void activatePassage(FileEntity file, FilePassage passage, UUID nextResponsibleUserId, Instant now) {
-        if (filePassageRepository.existsByFileIdAndStatus(file.getId(), PassageStatus.IN_PROGRESS)) {
-            throw FileException.conflict("PASSAGE_LOCK_VIOLATION", "Another passage is already in progress");
+    private void activateStage(
+            FileEntity file,
+            List<FilePassage> allPassages,
+            int stageOrder,
+            UUID nextResponsibleUserId,
+            Instant now) {
+        List<FilePassage> stagePassages = PassageStageHelper.passagesInStage(allPassages, stageOrder);
+        boolean singleStepStage = stagePassages.size() == 1;
+        for (FilePassage stagePassage : stagePassages) {
+            UUID override = singleStepStage ? nextResponsibleUserId : null;
+            activateSinglePassage(stagePassage, override, now);
         }
+    }
+
+    private void reactivateStage(List<FilePassage> allPassages, int stageOrder, Instant now) {
+        for (FilePassage stagePassage : PassageStageHelper.passagesInStage(allPassages, stageOrder)) {
+            stagePassage.setStatus(PassageStatus.IN_PROGRESS);
+            stagePassage.setReceivedAt(now);
+            stagePassage.setTransmittedAt(null);
+            stagePassage.setReturnReason(null);
+            stagePassage.setSuspendedAt(null);
+            stagePassage.setResumedAt(null);
+            stagePassage.setDueAt(delaiService.calculateDueDate(
+                    now,
+                    stagePassage.getChainStepTemplate().getDelayValue(),
+                    stagePassage.getChainStepTemplate().getDelayUnit()));
+            filePassageRepository.save(stagePassage);
+        }
+    }
+
+    private void resetStageToPending(List<FilePassage> allPassages, int stageOrder) {
+        for (FilePassage stagePassage : PassageStageHelper.passagesInStage(allPassages, stageOrder)) {
+            if (stagePassage.getStatus() == PassageStatus.RETURNED) {
+                continue;
+            }
+            stagePassage.setStatus(PassageStatus.PENDING);
+            stagePassage.setReceivedAt(null);
+            stagePassage.setTransmittedAt(null);
+            stagePassage.setDueAt(null);
+            stagePassage.setComment(null);
+            stagePassage.setReturnReason(null);
+            stagePassage.setSuspendedAt(null);
+            stagePassage.setResumedAt(null);
+            stagePassage.setConsumedHours(null);
+            filePassageRepository.save(stagePassage);
+        }
+    }
+
+    private void activateSinglePassage(FilePassage passage, UUID nextResponsibleUserId, Instant now) {
         ChainStepTemplate step = passage.getChainStepTemplate();
         User responsible;
         if (nextResponsibleUserId != null) {
@@ -435,10 +480,16 @@ public class PassageService {
 
     private FilePassage loadCurrentPassage(UUID fileId, SecurityUser actor) {
         loadFile(fileId, actor);
-        return filePassageRepository
-                .findByFileIdAndStatusWithDetails(fileId, PassageStatus.IN_PROGRESS)
-                .or(() -> filePassageRepository.findByFileIdAndStatusWithDetails(fileId, PassageStatus.SUSPENDED))
-                .orElseThrow(() -> FileException.notFound("PASSAGE_ACTIVE_NOT_FOUND", "No active passage for this file"));
+        List<FilePassage> active = filePassageRepository.findAllByFileIdAndStatusWithDetails(
+                fileId, PassageStatus.IN_PROGRESS);
+        if (active.isEmpty()) {
+            active = filePassageRepository.findAllByFileIdAndStatusWithDetails(
+                    fileId, PassageStatus.SUSPENDED);
+        }
+        if (active.isEmpty()) {
+            throw FileException.notFound("PASSAGE_ACTIVE_NOT_FOUND", "No active passage for this file");
+        }
+        return active.get(0);
     }
 
     private void assertInProgress(FileEntity file) {

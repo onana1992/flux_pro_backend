@@ -9,6 +9,7 @@ import com.nanotech.flux_pro_backend.entity.FilePassage;
 import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.PassageStatus;
 import com.nanotech.flux_pro_backend.service.DelaiService;
+import com.nanotech.flux_pro_backend.service.PassageStageHelper;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,17 +22,21 @@ public final class PassageMapper {
     public static FilePassageCircuitResponse toCircuit(
             FileEntity file, List<FilePassage> passages, DelaiService delaiService) {
         Instant now = Instant.now();
-        FilePassage current = passages.stream()
-                .filter(p -> p.getStatus() == PassageStatus.IN_PROGRESS
-                        || p.getStatus() == PassageStatus.SUSPENDED)
-                .findFirst()
+        List<FilePassage> active = PassageStageHelper.activePassages(passages);
+        Integer currentStage = active.stream()
+                .map(FilePassage::getStepOrder)
+                .min(Integer::compareTo)
                 .orElse(null);
+        List<CurrentHolderResponse> currentHolders = active.stream()
+                .map(p -> toCurrentHolder(p, delaiService, now))
+                .toList();
 
         return new FilePassageCircuitResponse(
                 file.getChainTemplate() != null ? file.getChainTemplate().getCode() : null,
                 file.getChainTemplate() != null ? file.getChainTemplate().getName() : null,
-                current != null ? current.getStepOrder() : null,
-                current != null ? toCurrentHolder(current, delaiService, now) : null,
+                currentStage,
+                currentHolders.isEmpty() ? null : currentHolders.get(0),
+                currentHolders,
                 passages.stream().map(p -> toPassage(p, delaiService, now)).toList());
     }
 
