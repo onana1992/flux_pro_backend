@@ -121,6 +121,28 @@ class ChainTemplateServiceTest {
         assert systemTemplate.getSteps().size() == 2;
     }
 
+    @Test
+    void validateSteps_acceptsParallelStepsInSameStage() {
+        List<ChainStepTemplateRequest> steps = List.of(
+                new ChainStepTemplateRequest(1, "Visa A", UserRole.AGENT, 2, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(1, "Visa B", UserRole.DIRECTOR, 3, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(2, "Clôture", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true));
+
+        chainTemplateService.validateSteps(systemTemplate, steps);
+    }
+
+    @Test
+    void validateSteps_rejectsParallelClosureStage() {
+        List<ChainStepTemplateRequest> steps = List.of(
+                new ChainStepTemplateRequest(1, "A", UserRole.AGENT, 1, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(2, "Clôture A", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true),
+                new ChainStepTemplateRequest(2, "Clôture B", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, false));
+
+        assertThatThrownBy(() -> chainTemplateService.validateSteps(systemTemplate, steps))
+                .isInstanceOf(ChainTemplateException.class)
+                .hasMessageContaining("only step");
+    }
+
     private ChainStepTemplateRequest step(int order, boolean closure) {
         return new ChainStepTemplateRequest(
                 order,
