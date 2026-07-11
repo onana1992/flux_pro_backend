@@ -17,9 +17,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -85,8 +91,7 @@ public class ChainTemplateService {
     public ChainTemplate replaceSteps(UUID id, List<ChainStepTemplateRequest> steps) {
         ChainTemplate template = findById(id);
         validateSteps(template, steps);
-        template.getSteps().clear();
-        template.getSteps().addAll(toStepEntities(template, steps));
+        mergeSteps(template, steps);
         return chainTemplateRepository.save(template);
     }
 
@@ -138,6 +143,7 @@ public class ChainTemplateService {
         copy.setSystemTemplate(false);
         List<ChainStepTemplateRequest> steps = source.getSteps().stream()
                 .map(s -> new ChainStepTemplateRequest(
+                        null,
                         s.getStepOrder(),
                         s.getLabel(),
                         s.getResponsibleRole(),
@@ -245,9 +251,57 @@ public class ChainTemplateService {
                 .toList();
     }
 
+    private void mergeSteps(ChainTemplate template, List<ChainStepTemplateRequest> requests) {
+        Map<UUID, ChainStepTemplate> existingById = template.getSteps().stream()
+                .filter(s -> s.getId() != null)
+                .collect(Collectors.toMap(ChainStepTemplate::getId, s -> s, (a, b) -> a, LinkedHashMap::new));
+
+        Set<UUID> keptIds = new HashSet<>();
+        List<ChainStepTemplate> toAdd = new ArrayList<>();
+        List<ChainStepTemplateRequest> ordered = requests.stream()
+                .sorted(Comparator.comparingInt(ChainStepTemplateRequest::stepOrder)
+                        .thenComparing(r -> r.label() != null ? r.label() : "", String.CASE_INSENSITIVE_ORDER))
+                .toList();
+
+        for (ChainStepTemplateRequest req : ordered) {
+            if (req.id() != null) {
+                ChainStepTemplate existing = existingById.get(req.id());
+                if (existing == null || existing.getChainTemplate() == null
+                        || !existing.getChainTemplate().getId().equals(template.getId())) {
+                    throw ChainTemplateException.badRequest(
+                            "CHAIN_STEP_NOT_FOUND", "Chain step not found: " + req.id(), req.id());
+                }
+                applyStepFields(existing, req);
+                keptIds.add(existing.getId());
+            } else {
+                toAdd.add(toStepEntity(template, req));
+            }
+        }
+
+        List<ChainStepTemplate> removed = template.getSteps().stream()
+                .filter(s -> s.getId() != null && !keptIds.contains(s.getId()))
+                .toList();
+        for (ChainStepTemplate step : removed) {
+            if (chainTemplateUsageService.isStepInstantiated(step.getId())) {
+                throw ChainTemplateException.conflict(
+                        "CHAIN_STEP_IN_USE",
+                        "Cannot remove chain step already used by file passages: " + step.getLabel(),
+                        step.getLabel());
+            }
+            template.getSteps().remove(step);
+        }
+
+        template.getSteps().addAll(toAdd);
+    }
+
     private ChainStepTemplate toStepEntity(ChainTemplate template, ChainStepTemplateRequest req) {
         ChainStepTemplate step = new ChainStepTemplate();
         step.setChainTemplate(template);
+        applyStepFields(step, req);
+        return step;
+    }
+
+    private void applyStepFields(ChainStepTemplate step, ChainStepTemplateRequest req) {
         step.setStepOrder(req.stepOrder());
         step.setLabel(req.label().trim());
         step.setResponsibleRole(req.responsibleRole());
@@ -256,12 +310,12 @@ public class ChainTemplateService {
         step.setExpectedAction(req.expectedAction());
         step.setOptional(req.optional());
         step.setClosureStep(req.closureStep());
-        return step;
     }
 
     private List<ChainStepTemplateRequest> toRequests(List<ChainStepTemplate> steps) {
         return steps.stream()
                 .map(s -> new ChainStepTemplateRequest(
+                        s.getId(),
                         s.getStepOrder(),
                         s.getLabel(),
                         s.getResponsibleRole(),

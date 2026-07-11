@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record ChainStepTemplateRequest(
+        java.util.UUID id,
         @NotNull @Min(1) Integer stepOrder,
         @NotBlank @Size(max = 255) String label,
         @NotNull UserRole responsibleRole,

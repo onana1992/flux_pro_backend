@@ -1,6 +1,7 @@
 package com.nanotech.flux_pro_backend.service;
 
 import com.nanotech.flux_pro_backend.enumeration.FileStatus;
+import com.nanotech.flux_pro_backend.repository.FilePassageRepository;
 import com.nanotech.flux_pro_backend.repository.FileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,9 +13,14 @@ import java.util.UUID;
 public class ChainTemplateUsageService {
 
     private final FileRepository fileRepository;
+    private final FilePassageRepository filePassageRepository;
 
     public boolean hasInProgressFiles(UUID templateId) {
         return fileRepository.existsByChainTemplateIdAndStatus(templateId, FileStatus.IN_PROGRESS)
                 || fileRepository.existsByChainTemplateIdAndStatus(templateId, FileStatus.ON_HOLD);
+    }
+
+    public boolean isStepInstantiated(UUID chainStepTemplateId) {
+        return filePassageRepository.existsByChainStepTemplateId(chainStepTemplateId);
     }
 }

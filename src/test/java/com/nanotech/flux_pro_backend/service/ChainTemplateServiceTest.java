@@ -73,8 +73,8 @@ class ChainTemplateServiceTest {
     void validateSteps_rejectsDelaySumExceeded() {
         systemTemplate.setTotalDelayDays(2);
         List<ChainStepTemplateRequest> steps = List.of(
-                new ChainStepTemplateRequest(1, "A", UserRole.AGENT, 3, DelayUnit.WORKING_DAYS, null, false, false),
-                new ChainStepTemplateRequest(2, "B", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true));
+                new ChainStepTemplateRequest(null, 1, "A", UserRole.AGENT, 3, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(null, 2, "B", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true));
 
         assertThatThrownBy(() -> chainTemplateService.validateSteps(systemTemplate, steps))
                 .isInstanceOf(ChainTemplateException.class)
@@ -112,8 +112,8 @@ class ChainTemplateServiceTest {
         when(chainTemplateRepository.save(systemTemplate)).thenReturn(systemTemplate);
 
         List<ChainStepTemplateRequest> steps = List.of(
-                new ChainStepTemplateRequest(1, "A", UserRole.AGENT, 1, DelayUnit.WORKING_DAYS, null, false, false),
-                new ChainStepTemplateRequest(2, "B", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true));
+                new ChainStepTemplateRequest(null, 1, "A", UserRole.AGENT, 1, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(null, 2, "B", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true));
 
         chainTemplateService.replaceSteps(id, steps);
 
@@ -124,9 +124,9 @@ class ChainTemplateServiceTest {
     @Test
     void validateSteps_acceptsParallelStepsInSameStage() {
         List<ChainStepTemplateRequest> steps = List.of(
-                new ChainStepTemplateRequest(1, "Visa A", UserRole.AGENT, 2, DelayUnit.WORKING_DAYS, null, false, false),
-                new ChainStepTemplateRequest(1, "Visa B", UserRole.DIRECTOR, 3, DelayUnit.WORKING_DAYS, null, false, false),
-                new ChainStepTemplateRequest(2, "Clôture", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true));
+                new ChainStepTemplateRequest(null, 1, "Visa A", UserRole.AGENT, 2, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(null, 1, "Visa B", UserRole.DIRECTOR, 3, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(null, 2, "Clôture", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true));
 
         chainTemplateService.validateSteps(systemTemplate, steps);
     }
@@ -134,9 +134,9 @@ class ChainTemplateServiceTest {
     @Test
     void validateSteps_rejectsParallelClosureStage() {
         List<ChainStepTemplateRequest> steps = List.of(
-                new ChainStepTemplateRequest(1, "A", UserRole.AGENT, 1, DelayUnit.WORKING_DAYS, null, false, false),
-                new ChainStepTemplateRequest(2, "Clôture A", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true),
-                new ChainStepTemplateRequest(2, "Clôture B", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, false));
+                new ChainStepTemplateRequest(null, 1, "A", UserRole.AGENT, 1, DelayUnit.WORKING_DAYS, null, false, false),
+                new ChainStepTemplateRequest(null, 2, "Clôture A", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, true),
+                new ChainStepTemplateRequest(null, 2, "Clôture B", UserRole.AGENT, 0, DelayUnit.WORKING_DAYS, null, false, false));
 
         assertThatThrownBy(() -> chainTemplateService.validateSteps(systemTemplate, steps))
                 .isInstanceOf(ChainTemplateException.class)
@@ -145,6 +145,7 @@ class ChainTemplateServiceTest {
 
     private ChainStepTemplateRequest step(int order, boolean closure) {
         return new ChainStepTemplateRequest(
+                null,
                 order,
                 "Step " + order,
                 UserRole.AGENT,

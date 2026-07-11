@@ -18,6 +18,8 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
 
     boolean existsByFileIdAndStatus(UUID fileId, PassageStatus status);
 
+    boolean existsByChainStepTemplateId(UUID chainStepTemplateId);
+
     @Query("""
             SELECT p FROM FilePassage p
             JOIN FETCH p.chainStepTemplate
