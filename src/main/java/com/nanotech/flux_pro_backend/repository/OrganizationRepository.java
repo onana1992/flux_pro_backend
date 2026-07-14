@@ -36,4 +36,10 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
 
     @Query("SELECT o FROM Organization o WHERE o.active = true")
     List<Organization> findAllActive();
+
+    @Query("""
+            SELECT DISTINCT o FROM Organization o
+            LEFT JOIN FETCH o.parent
+            """)
+    List<Organization> findAllWithParent();
 }

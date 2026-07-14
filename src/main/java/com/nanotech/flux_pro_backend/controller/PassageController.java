@@ -49,7 +49,7 @@ public class PassageController {
             @PathVariable UUID fileId,
             @PathVariable UUID passageId,
             @Valid @RequestBody(required = false) PassageTransmitRequest request) {
-        PassageTransmitRequest body = request != null ? request : new PassageTransmitRequest(null, null);
+        PassageTransmitRequest body = request != null ? request : new PassageTransmitRequest(null, null, null);
         return passageService.transmit(fileId, passageId, body, securityUtils.currentUser());
     }
 

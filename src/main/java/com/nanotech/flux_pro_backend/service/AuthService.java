@@ -16,6 +16,7 @@ import com.nanotech.flux_pro_backend.security.TranslatableBadCredentialsExceptio
 import com.nanotech.flux_pro_backend.security.TranslatableLockedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -117,10 +118,16 @@ public class AuthService {
         });
     }
 
+    /**
+     * Met à jour le mot de passe, lève le flag {@code mustChangePassword}, invalide les
+     * anciennes sessions et renvoie une <strong>nouvelle</strong> paire de tokens — sinon le
+     * client garde un refresh token déjà révoqué et tombe en 401 juste après le changement.
+     */
     @Transactional
-    public UserProfileResponse changePassword(SecurityUser user, String currentPassword, String newPassword) {
+    public TokenResponse changePassword(String currentPassword, String newPassword) {
+        SecurityUser user = requireCurrentUser();
         PasswordValidator.validate(newPassword);
-        User entity = userRepository.findById(user.getId())
+        User entity = userRepository.findByIdWithRolesAndOrganization(user.getId())
                 .orElseThrow(() -> new TranslatableBadCredentialsException("AUTH_USER_NOT_FOUND", "User not found"));
 
         if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
@@ -130,9 +137,19 @@ public class AuthService {
 
         entity.setPasswordHash(passwordEncoder.encode(newPassword));
         entity.setMustChangePassword(false);
+        entity.setFailedLoginAttempts(0);
+        entity.setLockedUntil(null);
         userRepository.save(entity);
         refreshTokenRepository.deleteByUserId(entity.getId());
-        return DtoMapper.toProfile(entity);
+        return buildTokenResponse(entity);
+    }
+
+    private SecurityUser requireCurrentUser() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof SecurityUser user)) {
+            throw new TranslatableBadCredentialsException("AUTH_NOT_AUTHENTICATED", "User not authenticated");
+        }
+        return user;
     }
 
     private TokenResponse buildTokenResponse(User user) {

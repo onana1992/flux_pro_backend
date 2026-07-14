@@ -4,8 +4,8 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-public record ChainStepAssignmentRequest(
-        @NotNull UUID chainStepTemplateId,
-        UUID responsibleUserId
+public record PassageNextAssignmentRequest(
+        @NotNull UUID passageId,
+        @NotNull UUID responsibleUserId
 ) {
 }

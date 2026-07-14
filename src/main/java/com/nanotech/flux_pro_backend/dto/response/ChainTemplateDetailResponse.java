@@ -16,6 +16,7 @@ public record ChainTemplateDetailResponse(
         DelayUnit delayUnit,
         boolean active,
         boolean systemTemplate,
+        boolean linkedToFiles,
         Instant createdAt,
         Instant updatedAt,
         List<ChainStepTemplateResponse> steps) {

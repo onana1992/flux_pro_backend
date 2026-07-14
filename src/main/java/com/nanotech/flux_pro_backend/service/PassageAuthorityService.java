@@ -3,7 +3,6 @@ package com.nanotech.flux_pro_backend.service;
 import com.nanotech.flux_pro_backend.entity.FilePassage;
 import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
-import com.nanotech.flux_pro_backend.security.OrganizationScopeService;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
 import org.springframework.stereotype.Service;
 
@@ -28,26 +27,20 @@ public class PassageAuthorityService {
         ROLE_RANK.put(UserRole.SUPER_ADMIN, 80);
     }
 
-    private final OrganizationScopeService organizationScopeService;
-
-    public PassageAuthorityService(OrganizationScopeService organizationScopeService) {
-        this.organizationScopeService = organizationScopeService;
-    }
-
+    /**
+     * Transmettre / retourner / suspendre : uniquement le responsable du maillon,
+     * ou SUPER_ADMIN / BUSINESS_ADMIN. Les autres rôles (même hiérarchiquement
+     * supérieurs) ne peuvent pas agir à la place du responsable.
+     */
     public boolean canActOnPassage(SecurityUser actor, FilePassage passage) {
+        if (actor.getRole() == UserRole.SUPER_ADMIN || actor.getRole() == UserRole.BUSINESS_ADMIN) {
+            return true;
+        }
         User responsible = passage.getResponsibleUser();
-        if (responsible == null) {
-            return organizationScopeService.hasGlobalScope(actor);
-        }
-        if (actor.getId().equals(responsible.getId())) {
-            return true;
-        }
-        if (organizationScopeService.hasGlobalScope(actor)) {
-            return true;
-        }
-        return isHierarchicallySuperior(actor.getRole(), responsible.getRole());
+        return responsible != null && actor.getId().equals(responsible.getId());
     }
 
+    /** Rang relatif des rôles — réutilisé pour l'escalade d'alertes (ALR). */
     public boolean isHierarchicallySuperior(UserRole actorRole, UserRole responsibleRole) {
         return ROLE_RANK.getOrDefault(actorRole, 0) > ROLE_RANK.getOrDefault(responsibleRole, 0);
     }

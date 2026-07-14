@@ -16,6 +16,8 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
 
     boolean existsByFileId(UUID fileId);
 
+    boolean existsByFileIdAndResponsibleUserId(UUID fileId, UUID responsibleUserId);
+
     boolean existsByFileIdAndStatus(UUID fileId, PassageStatus status);
 
     boolean existsByChainStepTemplateId(UUID chainStepTemplateId);

@@ -122,6 +122,22 @@ class ChainTemplateServiceTest {
     }
 
     @Test
+    void delete_rejectsWhenLinkedToFiles() {
+        UUID id = UUID.randomUUID();
+        ChainTemplate custom = new ChainTemplate();
+        custom.setId(id);
+        custom.setSystemTemplate(false);
+        when(chainTemplateRepository.findByIdWithSteps(id)).thenReturn(Optional.of(custom));
+        when(chainTemplateUsageService.isAssociatedWithFiles(id)).thenReturn(true);
+
+        assertThatThrownBy(() -> chainTemplateService.delete(id))
+                .isInstanceOf(ChainTemplateException.class)
+                .hasMessageContaining("already linked to files");
+
+        verify(chainTemplateRepository, never()).delete(any());
+    }
+
+    @Test
     void validateSteps_acceptsParallelStepsInSameStage() {
         List<ChainStepTemplateRequest> steps = List.of(
                 new ChainStepTemplateRequest(null, 1, "Visa A", UserRole.AGENT, 2, DelayUnit.WORKING_DAYS, null, false, false),

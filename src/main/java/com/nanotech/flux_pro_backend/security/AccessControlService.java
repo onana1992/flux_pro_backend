@@ -6,11 +6,13 @@ import com.nanotech.flux_pro_backend.entity.FileEntity;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
+import com.nanotech.flux_pro_backend.repository.FilePassageRepository;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -20,6 +22,7 @@ public class AccessControlService {
 
     private final OrganizationScopeService organizationScopeService;
     private final OrganizationRepository organizationRepository;
+    private final FilePassageRepository filePassageRepository;
 
     public boolean canReadUsers(SecurityUser actor) {
         return organizationScopeService.hasGlobalScope(actor)
@@ -115,10 +118,20 @@ public class AccessControlService {
 
     @Transactional(readOnly = true)
     public void assertCanAccessFile(SecurityUser actor, FileEntity file) {
-        if (file.getOrganization() == null) {
-            throw new TranslatableAccessDeniedException(
-                    "ACCESS_DENIED_ORGANIZATION_SCOPE", "Access denied to organization scope");
+        if (organizationScopeService.hasGlobalScope(actor)) {
+            return;
         }
-        assertCanAccessOrganization(actor, file.getOrganization().getId());
+        if (file.getCreatedBy() != null && Objects.equals(file.getCreatedBy().getId(), actor.getId())) {
+            return;
+        }
+        if (filePassageRepository.existsByFileIdAndResponsibleUserId(file.getId(), actor.getId())) {
+            return;
+        }
+        if (file.getOrganization() != null
+                && organizationScopeService.canAccess(actor, file.getOrganization().getId())) {
+            return;
+        }
+        throw new TranslatableAccessDeniedException(
+                "ACCESS_DENIED_ORGANIZATION_SCOPE", "Access denied to organization scope");
     }
 }

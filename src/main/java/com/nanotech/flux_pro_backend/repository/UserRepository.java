@@ -84,6 +84,24 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("role") UserRole role,
             @Param("organizationIds") Collection<UUID> organizationIds);
 
+    @Query("""
+            SELECT u FROM User u
+            JOIN FETCH u.organization
+            WHERE u.role = :role
+              AND u.active = true
+            ORDER BY u.lastName ASC, u.firstName ASC
+            """)
+    List<User> findActiveByRole(@Param("role") UserRole role);
+
+    @Query("""
+            SELECT u FROM User u
+            JOIN FETCH u.organization
+            WHERE u.organization.id = :organizationId
+              AND u.active = true
+            ORDER BY u.lastName ASC, u.firstName ASC
+            """)
+    List<User> findActiveByOrganizationId(@Param("organizationId") UUID organizationId);
+
     @Modifying
     @Query("""
             UPDATE User u

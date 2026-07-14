@@ -4,12 +4,9 @@ import com.nanotech.flux_pro_backend.dto.request.ChangePasswordRequest;
 import com.nanotech.flux_pro_backend.dto.request.LoginRequest;
 import com.nanotech.flux_pro_backend.dto.request.RefreshTokenRequest;
 import com.nanotech.flux_pro_backend.dto.response.TokenResponse;
-import com.nanotech.flux_pro_backend.dto.response.UserProfileResponse;
-import com.nanotech.flux_pro_backend.security.SecurityUtils;
 import com.nanotech.flux_pro_backend.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,11 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-    private final SecurityUtils securityUtils;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
@@ -41,8 +40,7 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
-    public UserProfileResponse changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        return authService.changePassword(
-                securityUtils.currentUser(), request.currentPassword(), request.newPassword());
+    public TokenResponse changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        return authService.changePassword(request.currentPassword(), request.newPassword());
     }
 }

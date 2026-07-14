@@ -29,9 +29,12 @@ public class DelaiService {
 
     private final BusinessCalendarDayRepository businessCalendarDayRepository;
 
+    /**
+     * Calcule l'échéance. Un délai ≤ 0 (ex. étape de clôture) signifie « pas d'échéance » → {@code null}.
+     */
     public Instant calculateDueDate(Instant start, int delayValue, DelayUnit unit) {
         if (delayValue <= 0) {
-            return start;
+            return null;
         }
         ZonedDateTime zonedStart = ZonedDateTime.ofInstant(start, BUSINESS_ZONE);
         if (unit == DelayUnit.WORKING_HOURS) {

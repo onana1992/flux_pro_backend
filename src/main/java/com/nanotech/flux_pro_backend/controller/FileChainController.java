@@ -3,6 +3,7 @@ package com.nanotech.flux_pro_backend.controller;
 import com.nanotech.flux_pro_backend.dto.request.ChainInitializeRequest;
 import com.nanotech.flux_pro_backend.dto.response.FilePassageCircuitResponse;
 import com.nanotech.flux_pro_backend.dto.response.PassageCandidateResponse;
+import com.nanotech.flux_pro_backend.dto.response.PassageOrganizationResponse;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.security.RbacPermissions;
 import com.nanotech.flux_pro_backend.security.RequiresPermission;
@@ -38,10 +39,24 @@ public class FileChainController {
     }
 
     @GetMapping("/candidates")
-    @RequiresPermission(RbacPermissions.FILES_UPDATE)
+    @RequiresPermission({RbacPermissions.FILES_UPDATE, RbacPermissions.FILES_TRANSMIT})
     public List<PassageCandidateResponse> candidates(
             @PathVariable UUID fileId,
             @RequestParam UserRole role) {
         return passageService.listCandidates(fileId, role, securityUtils.currentUser());
+    }
+
+    @GetMapping("/organizations")
+    @RequiresPermission({RbacPermissions.FILES_UPDATE, RbacPermissions.FILES_TRANSMIT})
+    public List<PassageOrganizationResponse> organizations(@PathVariable UUID fileId) {
+        return passageService.listAssignableOrganizations(fileId, securityUtils.currentUser());
+    }
+
+    @GetMapping("/users")
+    @RequiresPermission({RbacPermissions.FILES_UPDATE, RbacPermissions.FILES_TRANSMIT})
+    public List<PassageCandidateResponse> usersInOrganization(
+            @PathVariable UUID fileId,
+            @RequestParam UUID organizationId) {
+        return passageService.listUsersInOrganization(fileId, organizationId, securityUtils.currentUser());
     }
 }

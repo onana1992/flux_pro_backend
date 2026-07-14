@@ -50,7 +50,7 @@ Source backend des permissions : `RbacDataInitializer.rolePermissionMatrix()`.
 | Supprimer brouillon | ✓ | — | — | — | — | — | — | — |
 
 ¹ Si `FILES:UPDATE`.  
-² Si `FILES:TRANSMIT` **et** responsable du maillon (ou supérieur hiérarchique / manager).
+² Si `FILES:TRANSMIT` **et** responsable du maillon (ou SUPER_ADMIN / BUSINESS_ADMIN uniquement).
 
 ---
 

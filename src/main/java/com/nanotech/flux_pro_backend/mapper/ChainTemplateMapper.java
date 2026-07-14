@@ -25,6 +25,10 @@ public final class ChainTemplateMapper {
     }
 
     public static ChainTemplateDetailResponse toDetail(ChainTemplate template) {
+        return toDetail(template, false);
+    }
+
+    public static ChainTemplateDetailResponse toDetail(ChainTemplate template, boolean linkedToFiles) {
         return new ChainTemplateDetailResponse(
                 template.getId(),
                 template.getCode(),
@@ -35,6 +39,7 @@ public final class ChainTemplateMapper {
                 template.getDelayUnit(),
                 template.isActive(),
                 template.isSystemTemplate(),
+                linkedToFiles,
                 template.getCreatedAt(),
                 template.getUpdatedAt(),
                 template.getSteps().stream().map(ChainTemplateMapper::toStepResponse).toList());

@@ -24,13 +24,26 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
             SELECT DISTINCT f FROM FileEntity f
             LEFT JOIN FETCH f.organization
             LEFT JOIN FETCH f.chainTemplate
+            LEFT JOIN FETCH f.createdBy
             WHERE f.id = :id
             """)
     Optional<FileEntity> findByIdWithDetails(@Param("id") UUID id);
 
+    /**
+     * Liste /files : rôles à scope global voient tout ({@code allAccessible=true}) ;
+     * sinon dossiers où l'utilisateur est responsable d'un maillon, ou qu'il a créés (brouillons).
+     * Pas de filtre par périmètre organisationnel du dossier.
+     */
     @Query("""
             SELECT f FROM FileEntity f
-            WHERE (:allOrgs = true OR f.organization.id IN :orgIds)
+            WHERE (
+                    :allAccessible = true
+                    OR f.createdBy.id = :userId
+                    OR EXISTS (
+                        SELECT 1 FROM FilePassage p
+                        WHERE p.file = f AND p.responsibleUser.id = :userId
+                    )
+                  )
               AND (:organizationId IS NULL OR f.organization.id = :organizationId)
               AND (:fileTypeCode IS NULL OR f.fileTypeCode = :fileTypeCode)
               AND (:status IS NULL OR f.status = :status)
@@ -43,8 +56,8 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
                    OR LOWER(f.senderOrBeneficiary) LIKE LOWER(CONCAT('%', :search, '%')))
             """)
     Page<FileEntity> search(
-            @Param("allOrgs") boolean allOrgs,
-            @Param("orgIds") Set<UUID> orgIds,
+            @Param("allAccessible") boolean allAccessible,
+            @Param("userId") UUID userId,
             @Param("organizationId") UUID organizationId,
             @Param("fileTypeCode") String fileTypeCode,
             @Param("status") com.nanotech.flux_pro_backend.enumeration.FileStatus status,
@@ -55,6 +68,9 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
             Pageable pageable);
 
     boolean existsByChainTemplateIdAndStatus(UUID chainTemplateId, com.nanotech.flux_pro_backend.enumeration.FileStatus status);
+
+    /** True si au moins un dossier (tous statuts) référence ce template de chaîne. */
+    boolean existsByChainTemplateId(UUID chainTemplateId);
 
     /** Compteur « dossiers actifs » (DSH-05), toujours filtré par le périmètre organisationnel de l'appelant. */
     @Query("""

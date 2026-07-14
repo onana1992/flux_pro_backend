@@ -10,6 +10,7 @@ import com.nanotech.flux_pro_backend.mapper.ChainTemplateMapper;
 import com.nanotech.flux_pro_backend.security.RbacPermissions;
 import com.nanotech.flux_pro_backend.security.RequiresPermission;
 import com.nanotech.flux_pro_backend.service.ChainTemplateService;
+import com.nanotech.flux_pro_backend.service.ChainTemplateUsageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -37,6 +38,7 @@ import java.util.UUID;
 public class ChainTemplateController {
 
     private final ChainTemplateService chainTemplateService;
+    private final ChainTemplateUsageService chainTemplateUsageService;
 
     @GetMapping
     @RequiresPermission(RbacPermissions.CHAIN_TEMPLATES_READ)
@@ -51,13 +53,13 @@ public class ChainTemplateController {
     @GetMapping("/{id}")
     @RequiresPermission(RbacPermissions.CHAIN_TEMPLATES_READ)
     public ChainTemplateDetailResponse getById(@PathVariable UUID id) {
-        return ChainTemplateMapper.toDetail(chainTemplateService.findById(id));
+        return toDetail(chainTemplateService.findById(id));
     }
 
     @GetMapping("/by-code/{code}")
     @RequiresPermission(RbacPermissions.CHAIN_TEMPLATES_READ)
     public ChainTemplateDetailResponse getByCode(@PathVariable String code) {
-        return ChainTemplateMapper.toDetail(chainTemplateService.findByCode(code));
+        return toDetail(chainTemplateService.findByCode(code));
     }
 
     @PostMapping
@@ -65,7 +67,7 @@ public class ChainTemplateController {
     @ResponseStatus(HttpStatus.CREATED)
     public ChainTemplateDetailResponse create(@Valid @RequestBody ChainTemplateCreateRequest request) {
         ChainTemplate created = chainTemplateService.create(request);
-        return ChainTemplateMapper.toDetail(chainTemplateService.findById(created.getId()));
+        return toDetail(chainTemplateService.findById(created.getId()));
     }
 
     @PutMapping("/{id}")
@@ -73,8 +75,7 @@ public class ChainTemplateController {
     public ChainTemplateDetailResponse updateHeader(
             @PathVariable UUID id,
             @Valid @RequestBody ChainTemplateUpdateRequest request) {
-        ChainTemplate updated = chainTemplateService.updateHeader(id, request);
-        return ChainTemplateMapper.toDetail(updated);
+        return toDetail(chainTemplateService.updateHeader(id, request));
     }
 
     @PutMapping("/{id}/steps")
@@ -82,20 +83,19 @@ public class ChainTemplateController {
     public ChainTemplateDetailResponse replaceSteps(
             @PathVariable UUID id,
             @Valid @RequestBody List<ChainStepTemplateRequest> steps) {
-        ChainTemplate updated = chainTemplateService.replaceSteps(id, steps);
-        return ChainTemplateMapper.toDetail(updated);
+        return toDetail(chainTemplateService.replaceSteps(id, steps));
     }
 
     @PatchMapping("/{id}/activate")
     @RequiresPermission(RbacPermissions.CHAIN_TEMPLATES_UPDATE)
     public ChainTemplateDetailResponse activate(@PathVariable UUID id) {
-        return ChainTemplateMapper.toDetail(chainTemplateService.activate(id));
+        return toDetail(chainTemplateService.activate(id));
     }
 
     @PatchMapping("/{id}/deactivate")
     @RequiresPermission(RbacPermissions.CHAIN_TEMPLATES_UPDATE)
     public ChainTemplateDetailResponse deactivate(@PathVariable UUID id) {
-        return ChainTemplateMapper.toDetail(chainTemplateService.deactivate(id));
+        return toDetail(chainTemplateService.deactivate(id));
     }
 
     @DeleteMapping("/{id}")
@@ -110,6 +110,11 @@ public class ChainTemplateController {
     @ResponseStatus(HttpStatus.CREATED)
     public ChainTemplateDetailResponse duplicate(@PathVariable UUID id) {
         ChainTemplate copy = chainTemplateService.duplicate(id);
-        return ChainTemplateMapper.toDetail(chainTemplateService.findById(copy.getId()));
+        return toDetail(chainTemplateService.findById(copy.getId()));
+    }
+
+    private ChainTemplateDetailResponse toDetail(ChainTemplate template) {
+        return ChainTemplateMapper.toDetail(
+                template, chainTemplateUsageService.isAssociatedWithFiles(template.getId()));
     }
 }

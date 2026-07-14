@@ -20,6 +20,11 @@ public class ChainTemplateUsageService {
                 || fileRepository.existsByChainTemplateIdAndStatus(templateId, FileStatus.ON_HOLD);
     }
 
+    /** True si le template est déjà lié à au moins un dossier (tous statuts). */
+    public boolean isAssociatedWithFiles(UUID templateId) {
+        return fileRepository.existsByChainTemplateId(templateId);
+    }
+
     public boolean isStepInstantiated(UUID chainStepTemplateId) {
         return filePassageRepository.existsByChainStepTemplateId(chainStepTemplateId);
     }

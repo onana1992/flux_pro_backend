@@ -4,6 +4,7 @@ import com.nanotech.flux_pro_backend.common.FileException;
 import com.nanotech.flux_pro_backend.dto.request.ChainInitializeRequest;
 import com.nanotech.flux_pro_backend.dto.request.ChainStepAssignmentRequest;
 import com.nanotech.flux_pro_backend.dto.request.PassageCommentRequest;
+import com.nanotech.flux_pro_backend.dto.request.PassageNextAssignmentRequest;
 import com.nanotech.flux_pro_backend.dto.request.PassageReasonRequest;
 import com.nanotech.flux_pro_backend.dto.request.PassageReassignRequest;
 import com.nanotech.flux_pro_backend.dto.request.PassageReturnRequest;
@@ -11,6 +12,7 @@ import com.nanotech.flux_pro_backend.dto.request.PassageTransmitRequest;
 import com.nanotech.flux_pro_backend.dto.response.CurrentHolderResponse;
 import com.nanotech.flux_pro_backend.dto.response.FilePassageCircuitResponse;
 import com.nanotech.flux_pro_backend.dto.response.PassageCandidateResponse;
+import com.nanotech.flux_pro_backend.dto.response.PassageOrganizationResponse;
 import com.nanotech.flux_pro_backend.entity.ChainStepTemplate;
 import com.nanotech.flux_pro_backend.entity.ChainTemplate;
 import com.nanotech.flux_pro_backend.entity.FileEntity;
@@ -34,14 +36,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -83,23 +88,31 @@ public class PassageService {
         }
 
         Map<UUID, UUID> assignments = toAssignmentMap(request.assignments());
-        if (assignments.size() != steps.size()) {
-            throw FileException.badRequest(
-                    "PASSAGE_ASSIGNMENT_INCOMPLETE",
-                    "A responsible user must be chosen for every step");
-        }
-        for (ChainStepTemplate step : steps) {
-            if (!assignments.containsKey(step.getId())) {
+        Set<UUID> knownStepIds = steps.stream().map(ChainStepTemplate::getId).collect(Collectors.toSet());
+        for (UUID stepId : assignments.keySet()) {
+            if (!knownStepIds.contains(stepId)) {
                 throw FileException.badRequest(
-                        "PASSAGE_ASSIGNMENT_MISSING_FOR_STEP",
-                        "Missing responsible user for step: " + step.getLabel(), step.getLabel());
+                        "PASSAGE_ASSIGNMENT_UNKNOWN_STEP",
+                        "Assignment refers to a step that is not part of the selected chain");
+            }
+        }
+
+        Integer firstStage = PassageStageHelper.distinctStagesFromSteps(steps).stream()
+                .findFirst()
+                .orElseThrow();
+        for (ChainStepTemplate step : steps) {
+            if (step.getStepOrder() == firstStage && !assignments.containsKey(step.getId())) {
+                throw FileException.badRequest(
+                        "PASSAGE_FIRST_ASSIGNMENT_REQUIRED",
+                        "A responsible user must be chosen for the first stage: " + step.getLabel(),
+                        step.getLabel());
             }
         }
 
         Map<UUID, User> usersById = loadResponsibleUsers(assignments.values());
         Set<UUID> ministryOrgIds = new LinkedHashSet<>(collectMinistryOrganizationIds(file.getOrganization()));
-        for (ChainStepTemplate step : steps) {
-            User responsible = usersById.get(assignments.get(step.getId()));
+        for (UUID userId : assignments.values()) {
+            User responsible = usersById.get(userId);
             if (!ministryOrgIds.contains(responsible.getOrganization().getId())) {
                 throw FileException.badRequest(
                         "PASSAGE_USER_OUT_OF_SCOPE",
@@ -116,12 +129,20 @@ public class PassageService {
     @Transactional(readOnly = true)
     public List<PassageCandidateResponse> listCandidates(UUID fileId, UserRole role, SecurityUser actor) {
         FileEntity file = loadFile(fileId, actor);
-        // Tout l'arbre du ministère (ex. MINTP + DSI + DAG + DRTP…), pas seulement les parents du dossier.
-        List<UUID> orgIds = collectMinistryOrganizationIds(file.getOrganization());
-        if (orgIds.isEmpty()) {
-            return List.of();
-        }
-        return userRepository.findActiveByRoleInOrganizations(role, orgIds).stream()
+        Set<UUID> ministryOrgIds = new LinkedHashSet<>(collectMinistryOrganizationIds(file.getOrganization()));
+
+        // Prefer ministry-scoped candidates; if scope resolves empty (or misses users),
+        // fall back to all active users with that role so transmit is never blocked.
+        List<User> byRole = userRepository.findActiveByRole(role);
+        List<User> scoped = ministryOrgIds.isEmpty()
+                ? byRole
+                : byRole.stream()
+                        .filter(u -> u.getOrganization() != null
+                                && ministryOrgIds.contains(u.getOrganization().getId()))
+                        .toList();
+        List<User> selected = scoped.isEmpty() ? byRole : scoped;
+
+        return selected.stream()
                 .map(u -> new PassageCandidateResponse(
                         u.getId(),
                         u.getFirstName(),
@@ -130,6 +151,74 @@ public class PassageService {
                         u.getRole(),
                         u.getOrganization().getCode(),
                         u.getOrganization().getName()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PassageOrganizationResponse> listAssignableOrganizations(UUID fileId, SecurityUser actor) {
+        loadFile(fileId, actor);
+        List<Organization> all = organizationRepository.findAllWithParent();
+        if (all.isEmpty()) {
+            all = organizationRepository.findAll();
+        }
+        // Keep inactive orgs too — admin may need to pick any unit when assigning.
+        if (all.isEmpty()) {
+            return List.of();
+        }
+
+        Set<UUID> knownIds = all.stream().map(Organization::getId).collect(Collectors.toSet());
+        Map<UUID, List<Organization>> childrenByParent = new HashMap<>();
+        List<Organization> roots = new ArrayList<>();
+        for (Organization org : all) {
+            if (org.getParent() == null || !knownIds.contains(org.getParent().getId())) {
+                roots.add(org);
+            } else {
+                childrenByParent
+                        .computeIfAbsent(org.getParent().getId(), key -> new ArrayList<>())
+                        .add(org);
+            }
+        }
+        roots.sort(Comparator.comparing(Organization::getCode, String.CASE_INSENSITIVE_ORDER));
+        for (List<Organization> children : childrenByParent.values()) {
+            children.sort(Comparator.comparing(Organization::getCode, String.CASE_INSENSITIVE_ORDER));
+        }
+
+        List<PassageOrganizationResponse> result = new ArrayList<>();
+        for (Organization root : roots) {
+            appendOrgOptions(root, 0, childrenByParent, result);
+        }
+        return result;
+    }
+
+    private void appendOrgOptions(
+            Organization org,
+            int depth,
+            Map<UUID, List<Organization>> childrenByParent,
+            List<PassageOrganizationResponse> result) {
+        result.add(new PassageOrganizationResponse(org.getId(), org.getCode(), org.getName(), depth));
+        for (Organization child : childrenByParent.getOrDefault(org.getId(), List.of())) {
+            appendOrgOptions(child, depth + 1, childrenByParent, result);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<PassageCandidateResponse> listUsersInOrganization(
+            UUID fileId, UUID organizationId, SecurityUser actor) {
+        loadFile(fileId, actor);
+        Organization org = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> FileException.badRequest("ORGANIZATION_NOT_FOUND", "Organization not found"));
+        if (!org.isActive()) {
+            return List.of();
+        }
+        return userRepository.findActiveByOrganizationId(organizationId).stream()
+                .map(u -> new PassageCandidateResponse(
+                        u.getId(),
+                        u.getFirstName(),
+                        u.getLastName(),
+                        u.getEmail(),
+                        u.getRole(),
+                        u.getOrganization() != null ? u.getOrganization().getCode() : org.getCode(),
+                        u.getOrganization() != null ? u.getOrganization().getName() : org.getName()))
                 .toList();
     }
 
@@ -194,11 +283,16 @@ public class PassageService {
 
         ChainStepTemplate currentStep = passage.getChainStepTemplate();
         List<FilePassage> allPassages = filePassageRepository.findByFileIdWithDetails(fileId);
-        int currentStage = passage.getStepOrder();
 
         if (currentStep.isClosureStep()) {
-            return PassageMapper.toCircuit(file, allPassages, delaiService);
+            closeFileAfterClosureStep(file, request.comment(), now);
+            return PassageMapper.toCircuit(
+                    fileRepository.findByIdWithDetails(fileId).orElse(file),
+                    filePassageRepository.findByFileIdWithDetails(fileId),
+                    delaiService);
         }
+
+        int currentStage = passage.getStepOrder();
 
         if (!PassageStageHelper.isStageComplete(allPassages, currentStage)) {
             return PassageMapper.toCircuit(file, allPassages, delaiService);
@@ -209,7 +303,7 @@ public class PassageService {
             return PassageMapper.toCircuit(file, allPassages, delaiService);
         }
 
-        activateStage(file, allPassages, nextStage, request.nextResponsibleUserId(), now);
+        activateStage(file, allPassages, nextStage, request.nextResponsibleUserId(), request.nextAssignments(), now);
         return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
     }
 
@@ -341,17 +435,43 @@ public class PassageService {
         filePassageRepository.save(passage);
     }
 
+    /**
+     * Maillon {@code closure_step} : clôture le dossier.
+     * Motif = commentaire de transmission (≥ 10 car.) — obligatoire.
+     * La pièce jointe de réponse est optionnelle.
+     */
+    private void closeFileAfterClosureStep(FileEntity file, String comment, Instant now) {
+        if (!StringUtils.hasText(comment) || comment.trim().length() < 10) {
+            throw FileException.badRequest(
+                    "PASSAGE_CLOSURE_REASON_REQUIRED",
+                    "A closure reason of at least 10 characters is required on the closure step");
+        }
+        file.setClosureReason(comment.trim());
+        file.setClosedAt(now);
+        file.setStatus(FileStatus.CLOSED);
+        file.setExternalHoldReason(null);
+        file.setExternalHoldSince(null);
+        fileRepository.save(file);
+    }
+
     private void activateStage(
             FileEntity file,
             List<FilePassage> allPassages,
             int stageOrder,
             UUID nextResponsibleUserId,
+            List<PassageNextAssignmentRequest> nextAssignments,
             Instant now) {
         List<FilePassage> stagePassages = PassageStageHelper.passagesInStage(allPassages, stageOrder);
+        Set<UUID> ministryOrgIds = new LinkedHashSet<>(collectMinistryOrganizationIds(file.getOrganization()));
+        Map<UUID, UUID> overridesByPassageId = toNextAssignmentMap(nextAssignments);
         boolean singleStepStage = stagePassages.size() == 1;
+
         for (FilePassage stagePassage : stagePassages) {
-            UUID override = singleStepStage ? nextResponsibleUserId : null;
-            activateSinglePassage(stagePassage, override, now);
+            UUID override = overridesByPassageId.get(stagePassage.getId());
+            if (override == null && singleStepStage) {
+                override = nextResponsibleUserId;
+            }
+            activateSinglePassage(stagePassage, override, ministryOrgIds, now);
         }
     }
 
@@ -389,7 +509,8 @@ public class PassageService {
         }
     }
 
-    private void activateSinglePassage(FilePassage passage, UUID nextResponsibleUserId, Instant now) {
+    private void activateSinglePassage(
+            FilePassage passage, UUID nextResponsibleUserId, Set<UUID> ministryOrgIds, Instant now) {
         ChainStepTemplate step = passage.getChainStepTemplate();
         User responsible;
         if (nextResponsibleUserId != null) {
@@ -397,6 +518,11 @@ public class PassageService {
                     .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_NOT_FOUND", "Responsible user not found"));
             if (!responsible.isActive()) {
                 throw FileException.badRequest("PASSAGE_USER_INACTIVE", "Responsible user is inactive");
+            }
+            if (!ministryOrgIds.contains(responsible.getOrganization().getId())) {
+                throw FileException.badRequest(
+                        "PASSAGE_USER_OUT_OF_SCOPE",
+                        "Responsible user must belong to the same ministry tree as the file");
             }
         } else if (passage.getResponsibleUser() != null) {
             responsible = passage.getResponsibleUser();
@@ -414,9 +540,26 @@ public class PassageService {
     private Map<UUID, UUID> toAssignmentMap(List<ChainStepAssignmentRequest> assignments) {
         Map<UUID, UUID> map = new HashMap<>();
         for (ChainStepAssignmentRequest assignment : assignments) {
+            if (assignment.responsibleUserId() == null) {
+                continue;
+            }
             if (map.put(assignment.chainStepTemplateId(), assignment.responsibleUserId()) != null) {
                 throw FileException.badRequest(
                         "PASSAGE_ASSIGNMENT_DUPLICATE", "Duplicate assignment for the same step");
+            }
+        }
+        return map;
+    }
+
+    private Map<UUID, UUID> toNextAssignmentMap(List<PassageNextAssignmentRequest> nextAssignments) {
+        Map<UUID, UUID> map = new HashMap<>();
+        if (nextAssignments == null) {
+            return map;
+        }
+        for (PassageNextAssignmentRequest assignment : nextAssignments) {
+            if (map.put(assignment.passageId(), assignment.responsibleUserId()) != null) {
+                throw FileException.badRequest(
+                        "PASSAGE_ASSIGNMENT_DUPLICATE", "Duplicate assignment for the same passage");
             }
         }
         return map;
@@ -440,30 +583,46 @@ public class PassageService {
 
     /** Remonte à la racine (ex. MINTP) puis inclut toute la descendance. */
     private List<UUID> collectMinistryOrganizationIds(Organization organization) {
+        List<Organization> all = organizationRepository.findAllWithParent();
+        if (all.isEmpty()) {
+            return List.of(organization.getId());
+        }
+
+        Map<UUID, Organization> byId = new HashMap<>();
+        Map<UUID, List<Organization>> childrenByParent = new HashMap<>();
+        for (Organization org : all) {
+            byId.put(org.getId(), org);
+            UUID parentId = org.getParent() != null ? org.getParent().getId() : null;
+            if (parentId != null) {
+                childrenByParent.computeIfAbsent(parentId, key -> new ArrayList<>()).add(org);
+            }
+        }
+
         UUID rootId = organization.getId();
-        UUID currentId = organization.getId();
-        while (currentId != null) {
-            Organization current = organizationRepository.findById(currentId).orElse(null);
-            if (current == null) {
+        UUID walkId = organization.getId();
+        Set<UUID> seen = new HashSet<>();
+        while (walkId != null && seen.add(walkId)) {
+            rootId = walkId;
+            Organization current = byId.get(walkId);
+            if (current == null || current.getParent() == null) {
                 break;
             }
-            rootId = current.getId();
-            if (current.getParent() == null) {
-                break;
-            }
-            currentId = current.getParent().getId();
+            walkId = current.getParent().getId();
         }
 
         Set<UUID> ids = new LinkedHashSet<>();
-        collectDescendants(rootId, ids);
-        return new ArrayList<>(ids);
-    }
-
-    private void collectDescendants(UUID orgId, Set<UUID> ids) {
-        ids.add(orgId);
-        for (Organization child : organizationRepository.findByParentId(orgId)) {
-            collectDescendants(child.getId(), ids);
+        ArrayDeque<UUID> queue = new ArrayDeque<>();
+        queue.add(rootId);
+        while (!queue.isEmpty()) {
+            UUID id = queue.removeFirst();
+            if (!ids.add(id)) {
+                continue;
+            }
+            for (Organization child : childrenByParent.getOrDefault(id, List.of())) {
+                queue.add(child.getId());
+            }
         }
+        return new ArrayList<>(ids);
     }
 
     private FileEntity loadFile(UUID fileId, SecurityUser actor) {

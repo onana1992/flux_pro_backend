@@ -36,7 +36,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -69,17 +68,10 @@ public class FileService {
             LocalDate receivedTo,
             Pageable pageable,
             SecurityUser actor) {
-        OrganizationScopeService.ScopeFilter scope = organizationScopeService.resolveScopeFilter(actor);
-        if (!scope.allOrganizations() && scope.organizationIds().isEmpty()) {
-            return Page.empty(pageable);
-        }
-        if (organizationId != null) {
-            accessControlService.assertCanAccessOrganization(actor, organizationId);
-        }
-        Set<UUID> orgIds = scope.organizationIds().isEmpty() ? Set.of(UUID.randomUUID()) : scope.organizationIds();
+        boolean allAccessible = organizationScopeService.hasGlobalScope(actor);
         return fileRepository.search(
-                        scope.allOrganizations(),
-                        orgIds,
+                        allAccessible,
+                        actor.getId(),
                         organizationId,
                         fileTypeCode,
                         status,
@@ -192,13 +184,14 @@ public class FileService {
                     "File can only be closed when in progress");
         }
 
-        var attachment = fileAttachmentRepository.findByIdAndFileId(request.responseAttachmentId(), file.getId())
-                .orElseThrow(() -> FileException.badRequest(
-                        "FILE_CLOSURE_INCOMPLETE", "Response attachment not found on this file"));
-
-        if (!attachment.isResponseDocument()) {
-            attachment.setResponseDocument(true);
-            fileAttachmentRepository.save(attachment);
+        if (request.responseAttachmentId() != null) {
+            var attachment = fileAttachmentRepository.findByIdAndFileId(request.responseAttachmentId(), file.getId())
+                    .orElseThrow(() -> FileException.badRequest(
+                            "FILE_CLOSURE_INCOMPLETE", "Response attachment not found on this file"));
+            if (!attachment.isResponseDocument()) {
+                attachment.setResponseDocument(true);
+                fileAttachmentRepository.save(attachment);
+            }
         }
 
         file.setClosureReason(request.closureReason());

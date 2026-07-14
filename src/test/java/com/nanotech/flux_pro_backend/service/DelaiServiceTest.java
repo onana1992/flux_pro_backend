@@ -45,6 +45,13 @@ class DelaiServiceTest {
     }
 
     @Test
+    void calculateDueDate_zeroDelay_returnsNull() {
+        Instant start = ZonedDateTime.of(2026, 6, 10, 9, 0, 0, 0, DelaiService.BUSINESS_ZONE).toInstant();
+        assertThat(delaiService.calculateDueDate(start, 0, DelayUnit.WORKING_DAYS)).isNull();
+        assertThat(delaiService.calculateDueDate(start, -1, DelayUnit.WORKING_HOURS)).isNull();
+    }
+
+    @Test
     void addWorkingHours_splitsAcrossWeekend() {
         ZonedDateTime start = ZonedDateTime.of(2026, 6, 12, 15, 0, 0, 0, DelaiService.BUSINESS_ZONE);
         ZonedDateTime due = delaiService.addWorkingHours(start, 4);

@@ -120,6 +120,11 @@ public class ChainTemplateService {
             throw ChainTemplateException.forbidden(
                     "CHAIN_SYSTEM_TEMPLATE_PROTECTED", "System chain templates cannot be deleted");
         }
+        if (chainTemplateUsageService.isAssociatedWithFiles(id)) {
+            throw ChainTemplateException.conflict(
+                    "CHAIN_TEMPLATE_IN_USE",
+                    "Cannot delete a chain template already linked to files");
+        }
         chainTemplateRepository.delete(template);
     }
 
