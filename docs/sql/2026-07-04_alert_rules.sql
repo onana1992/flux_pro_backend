@@ -6,7 +6,8 @@
 -- IMPORTANT : chain_template_id est NOT NULL — il n'existe aucune règle globale/implicite.
 -- Un template sans ligne dans cette table ne génère aucune alerte (cf. docs/SPEC-ALR.md §7 ALR-R04).
 -- Le profil de seed CDC §10.2 n'est PAS injecté ici : il est appliqué à la demande, par template,
--- via POST /api/admin/chain-templates/{id}/alert-rules/apply-default-profile (ALR-F18).
+-- via POST /api/admin/chain-templates/{id}/alert-rules/apply-default-profile (ALR-F18),
+-- ou en masse via docs/sql/2026-07-14_seed_alert_rules_t01_t06.sql (T01–T06).
 
 CREATE TABLE IF NOT EXISTS alert_rules (
     id                      BINARY(16)   NOT NULL PRIMARY KEY,

@@ -70,7 +70,10 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
             SELECT p FROM FilePassage p
             JOIN FETCH p.file f
             JOIN FETCH p.chainStepTemplate
-            LEFT JOIN FETCH p.responsibleUser
+            LEFT JOIN FETCH p.responsibleUser ru
+            LEFT JOIN FETCH ru.organization
+            JOIN FETCH f.organization
+            JOIN FETCH f.chainTemplate
             WHERE p.status = com.nanotech.flux_pro_backend.enumeration.PassageStatus.IN_PROGRESS
               AND f.status = com.nanotech.flux_pro_backend.enumeration.FileStatus.IN_PROGRESS
               AND p.dueAt IS NOT NULL

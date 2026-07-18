@@ -8,6 +8,8 @@ import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.OrganizationType;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.mapper.DtoMapper;
+import com.nanotech.flux_pro_backend.repository.FileNumberSequenceRepository;
+import com.nanotech.flux_pro_backend.repository.FileRepository;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
 import com.nanotech.flux_pro_backend.repository.UserRepository;
 import com.nanotech.flux_pro_backend.security.OrganizationScopeService;
@@ -28,6 +30,8 @@ public class OrganizationService {
     private final OrganizationTypeService organizationTypeService;
     private final OrganizationScopeService organizationScopeService;
     private final UserRepository userRepository;
+    private final FileRepository fileRepository;
+    private final FileNumberSequenceRepository fileNumberSequenceRepository;
 
     @Transactional(readOnly = true)
     public List<OrganizationTreeResponse> getTree(SecurityUser user) {
@@ -107,6 +111,10 @@ public class OrganizationService {
     public void delete(UUID id) {
         Organization org = organizationRepository.findById(id)
                 .orElseThrow(() -> AppException.notFound("ORGANIZATION_NOT_FOUND", "Organization not found"));
+        if (org.getParent() == null) {
+            throw AppException.conflict(
+                    "ORGANIZATION_IS_ROOT", "Cannot delete the root organization");
+        }
         if (organizationRepository.existsByParentId(id)) {
             throw AppException.conflict(
                     "ORGANIZATION_HAS_CHILDREN", "Cannot delete organization with child entities");
@@ -115,6 +123,11 @@ public class OrganizationService {
             throw AppException.conflict(
                     "ORGANIZATION_HAS_USERS", "Cannot delete organization with assigned users");
         }
+        if (fileRepository.existsByOrganizationId(id)) {
+            throw AppException.conflict(
+                    "ORGANIZATION_HAS_FILES", "Cannot delete organization with associated files");
+        }
+        fileNumberSequenceRepository.deleteByOrganizationId(id);
         organizationRepository.delete(org);
     }
 
@@ -125,10 +138,16 @@ public class OrganizationService {
                     "ORGANIZATION_TYPE_INACTIVE", "Organization type is inactive: " + type.getCode(),
                     type.getCode());
         }
-        if (request.parentId() == null && !type.isAllowsRoot()) {
-            throw AppException.badRequest(
-                    "ORGANIZATION_TYPE_CANNOT_BE_ROOT", "Organization type cannot be root: " + type.getCode(),
-                    type.getCode());
+        if (request.parentId() == null) {
+            if (!type.isAllowsRoot()) {
+                throw AppException.badRequest(
+                        "ORGANIZATION_TYPE_CANNOT_BE_ROOT", "Organization type cannot be root: " + type.getCode(),
+                        type.getCode());
+            }
+            if (organizationRepository.existsOtherRoot(org.getId())) {
+                throw AppException.conflict(
+                        "ORGANIZATION_ROOT_EXISTS", "A root organization already exists");
+            }
         }
         org.setCode(request.code());
         org.setName(request.name());

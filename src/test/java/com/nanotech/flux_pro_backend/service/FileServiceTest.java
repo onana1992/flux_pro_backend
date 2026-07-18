@@ -27,6 +27,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,6 +62,8 @@ class FileServiceTest {
     private OrganizationScopeService organizationScopeService;
     @Mock
     private AccessControlService accessControlService;
+    @Mock
+    private ClockService clockService;
 
     @InjectMocks
     private FileService fileService;
@@ -73,30 +78,33 @@ class FileServiceTest {
         organization.setId(orgId);
         organization.setCode("DAG");
         organization.setActive(true);
+        lenient()
+                .when(clockService.nowZoned())
+                .thenReturn(ZonedDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneId.of("Africa/Douala")));
     }
 
     @Test
     void allocateReferenceNumber_incrementsSequenceForSameOrgAndYear() {
         FileNumberSequence sequence = new FileNumberSequence();
         sequence.setOrganizationId(orgId);
-        sequence.setYear(java.time.Year.now(java.time.ZoneId.of("Africa/Douala")).getValue());
+        sequence.setYear(2026);
         sequence.setLastSequence(41);
 
         when(organizationRepository.findById(orgId)).thenReturn(Optional.of(organization));
-        when(fileNumberSequenceRepository.findForUpdate(eq(orgId), any(Integer.class)))
+        when(fileNumberSequenceRepository.findForUpdate(eq(orgId), eq(2026)))
                 .thenReturn(Optional.of(sequence));
         when(fileNumberSequenceRepository.save(any(FileNumberSequence.class))).thenAnswer(inv -> inv.getArgument(0));
 
         String reference = fileService.allocateReferenceNumber(orgId);
 
-        assertThat(reference).matches("MINTP-DAG-\\d{4}-0042");
+        assertThat(reference).isEqualTo("MINTP-DAG-2026-0042");
         assertThat(sequence.getLastSequence()).isEqualTo(42);
     }
 
     @Test
     void allocateReferenceNumber_createsSequenceForNewOrgYear() {
         when(organizationRepository.findById(orgId)).thenReturn(Optional.of(organization));
-        when(fileNumberSequenceRepository.findForUpdate(eq(orgId), any(Integer.class)))
+        when(fileNumberSequenceRepository.findForUpdate(eq(orgId), eq(2026)))
                 .thenReturn(Optional.empty());
         when(fileNumberSequenceRepository.save(any(FileNumberSequence.class))).thenAnswer(inv -> {
             FileNumberSequence seq = inv.getArgument(0);

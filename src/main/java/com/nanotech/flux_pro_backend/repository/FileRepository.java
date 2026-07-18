@@ -72,6 +72,9 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
     /** True si au moins un dossier (tous statuts) référence ce template de chaîne. */
     boolean existsByChainTemplateId(UUID chainTemplateId);
 
+    @Query("SELECT COUNT(f) > 0 FROM FileEntity f WHERE f.organization.id = :organizationId")
+    boolean existsByOrganizationId(@Param("organizationId") UUID organizationId);
+
     /** Compteur « dossiers actifs » (DSH-05), toujours filtré par le périmètre organisationnel de l'appelant. */
     @Query("""
             SELECT COUNT(f) FROM FileEntity f

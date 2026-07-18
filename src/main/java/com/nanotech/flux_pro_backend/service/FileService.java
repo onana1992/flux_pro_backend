@@ -32,10 +32,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.UUID;
 
 @Service
@@ -45,7 +42,6 @@ public class FileService {
     static final String REFERENCE_PREFIX = "MINTP";
     static final String VERY_URGENT_COURIER_TYPE = "COUR-STD";
     static final String VERY_URGENT_TEMPLATE_CODE = "T02";
-    static final ZoneId NUMBERING_ZONE = ZoneId.of("Africa/Douala");
 
     private final FileRepository fileRepository;
     private final FileAttachmentRepository fileAttachmentRepository;
@@ -56,6 +52,7 @@ public class FileService {
     private final UserRepository userRepository;
     private final OrganizationScopeService organizationScopeService;
     private final AccessControlService accessControlService;
+    private final ClockService clockService;
 
     @Transactional(readOnly = true)
     public Page<FileSummaryResponse> findAll(
@@ -170,7 +167,7 @@ public class FileService {
         }
         file.setStatus(FileStatus.CANCELLED);
         file.setCancellationReason(request.reason());
-        file.setCancelledAt(Instant.now());
+        file.setCancelledAt(clockService.now());
         return toDetail(fileRepository.save(file));
     }
 
@@ -195,7 +192,7 @@ public class FileService {
         }
 
         file.setClosureReason(request.closureReason());
-        file.setClosedAt(Instant.now());
+        file.setClosedAt(clockService.now());
         file.setStatus(FileStatus.CLOSED);
         return toDetail(fileRepository.save(file));
     }
@@ -235,7 +232,7 @@ public class FileService {
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> FileException.badRequest("FILE_ORGANIZATION_NOT_FOUND", "Organization not found"));
 
-        int year = ZonedDateTime.now(NUMBERING_ZONE).getYear();
+        int year = clockService.nowZoned().getYear();
         FileNumberSequence sequence = fileNumberSequenceRepository.findForUpdate(organizationId, year)
                 .orElseGet(() -> {
                     FileNumberSequence created = new FileNumberSequence();

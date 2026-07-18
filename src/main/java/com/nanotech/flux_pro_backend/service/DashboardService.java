@@ -61,6 +61,7 @@ public class DashboardService {
     private final FilePassageRepository filePassageRepository;
     private final FileTypeRepository fileTypeRepository;
     private final DelaiService delaiService;
+    private final ClockService clockService;
 
     @Transactional(readOnly = true)
     public DashboardSummaryResponse summary(SecurityUser actor, UUID organizationId, String fileTypeCode) {
@@ -70,7 +71,7 @@ public class DashboardService {
             return new DashboardSummaryResponse(organizationId, organizationCode, scope.width(), 0, 0, 0, 0);
         }
 
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         long active = fileRepository.countActiveByScope(scope.allOrgs(), scope.orgIds(), organizationId, fileTypeCode);
         long overdue = filePassageRepository
                 .findOverdueForScope(now, scope.allOrgs(), scope.orgIds(), organizationId)
@@ -79,12 +80,12 @@ public class DashboardService {
                 .distinct()
                 .count();
 
-        ZonedDateTime monthStart = ZonedDateTime.now(DelaiService.BUSINESS_ZONE)
+        ZonedDateTime monthStart = now.atZone(DelaiService.BUSINESS_ZONE)
                 .toLocalDate().withDayOfMonth(1).atStartOfDay(DelaiService.BUSINESS_ZONE);
         long closedThisMonth = fileRepository.countClosedBetween(
                 monthStart.toInstant(), now, scope.allOrgs(), scope.orgIds(), organizationId, fileTypeCode);
         long createdThisMonth = fileRepository.countReceivedBetween(
-                monthStart.toLocalDate(), LocalDate.now(DelaiService.BUSINESS_ZONE),
+                monthStart.toLocalDate(), now.atZone(DelaiService.BUSINESS_ZONE).toLocalDate(),
                 scope.allOrgs(), scope.orgIds(), organizationId, fileTypeCode);
 
         return new DashboardSummaryResponse(
@@ -94,7 +95,7 @@ public class DashboardService {
     /** DSH-01 — jamais filtré par périmètre organisationnel : chacun voit sa propre activité. */
     @Transactional(readOnly = true)
     public MyActivityResponse myActivity(SecurityUser actor) {
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         List<FilePassage> active = filePassageRepository.findActiveByResponsibleUser(actor.getId());
         Instant since = now.minusSeconds(30L * 24 * 3600);
         List<FilePassage> transmitted = filePassageRepository
@@ -116,7 +117,7 @@ public class DashboardService {
         if (scope.empty()) {
             return List.of();
         }
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         List<FilePassage> passages = filePassageRepository
                 .findActiveForWorkload(scope.allOrgs(), scope.orgIds(), organizationId);
 
@@ -153,7 +154,7 @@ public class DashboardService {
             return List.of();
         }
         int effectiveLimit = Math.max(1, Math.min(limit, 100));
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         return filePassageRepository.findOverdueForScope(now, scope.allOrgs(), scope.orgIds(), organizationId)
                 .stream()
                 .limit(effectiveLimit)
@@ -169,7 +170,7 @@ public class DashboardService {
         if (scope.empty()) {
             return List.of();
         }
-        Instant from = Instant.now().minusSeconds((long) windowDays * 24 * 3600);
+        Instant from = clockService.now().minusSeconds((long) windowDays * 24 * 3600);
         List<FileEntity> closed = fileRepository.findClosedSince(
                 from, scope.allOrgs(), scope.orgIds(), organizationId);
 
@@ -209,7 +210,7 @@ public class DashboardService {
             return List.of();
         }
         Set<UUID> orgIds = scope.organizationIds().isEmpty() ? Set.of(UUID.randomUUID()) : scope.organizationIds();
-        Instant from = Instant.now().minusSeconds((long) windowDays * 24 * 3600);
+        Instant from = clockService.now().minusSeconds((long) windowDays * 24 * 3600);
         List<FileEntity> closed = fileRepository.findClosedSince(from, scope.allOrganizations(), orgIds, null);
 
         Map<Organization, List<FileEntity>> byGroup = new HashMap<>();

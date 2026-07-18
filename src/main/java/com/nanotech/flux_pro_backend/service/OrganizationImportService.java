@@ -100,6 +100,13 @@ public class OrganizationImportService {
                                 line, "import.org.parentRequired", "type {0} requires a parent", typeCode));
                         continue;
                     }
+                    boolean otherRootExists = cache.values().stream()
+                            .anyMatch(existing -> existing.getParent() == null && !code.equals(existing.getCode()));
+                    if (otherRootExists) {
+                        errors.add(lineError(
+                                line, "import.org.rootExists", "a root organization already exists"));
+                        continue;
+                    }
                     org.setParent(null);
                 }
 

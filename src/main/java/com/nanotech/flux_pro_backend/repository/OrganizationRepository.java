@@ -29,6 +29,14 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
 
     List<Organization> findByParentIsNull();
 
+    /** True s'il existe déjà une organisation racine autre que {@code excludeId} (null = toute racine). */
+    @Query("""
+            SELECT COUNT(o) > 0 FROM Organization o
+            WHERE o.parent IS NULL
+              AND (:excludeId IS NULL OR o.id <> :excludeId)
+            """)
+    boolean existsOtherRoot(@Param("excludeId") UUID excludeId);
+
     List<Organization> findByParentId(UUID parentId);
 
     @Query("SELECT COUNT(o) > 0 FROM Organization o WHERE o.parent.id = :parentId")

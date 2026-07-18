@@ -58,6 +58,7 @@ public class PassageService {
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final DelaiService delaiService;
+    private final ClockService clockService;
     private final PassageAuthorityService passageAuthorityService;
     private final AccessControlService accessControlService;
 
@@ -226,13 +227,13 @@ public class PassageService {
     public FilePassageCircuitResponse getCircuit(UUID fileId, SecurityUser actor) {
         FileEntity file = loadFile(fileId, actor);
         List<FilePassage> passages = filePassageRepository.findByFileIdWithDetails(fileId);
-        return PassageMapper.toCircuit(file, passages, delaiService);
+        return PassageMapper.toCircuit(file, passages, delaiService, clockService.now());
     }
 
     @Transactional(readOnly = true)
     public CurrentHolderResponse getCurrentHolder(UUID fileId, SecurityUser actor) {
         FilePassage passage = loadCurrentPassage(fileId, actor);
-        return PassageMapper.toCurrentHolder(passage, delaiService, Instant.now());
+        return PassageMapper.toCurrentHolder(passage, delaiService, clockService.now());
     }
 
     private void initializeChain(
@@ -240,7 +241,7 @@ public class PassageService {
             List<ChainStepTemplate> steps,
             Map<UUID, UUID> assignments,
             Map<UUID, User> usersById) {
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         Integer firstStage = PassageStageHelper.distinctStagesFromSteps(steps).stream()
                 .findFirst()
                 .orElseThrow();
@@ -271,7 +272,7 @@ public class PassageService {
         assertActivePassage(passage);
         assertCanAct(passage, actor);
 
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         if (passage.getDueAt() != null
                 && delaiService.isOverdue(passage.getDueAt(), now)
                 && !StringUtils.hasText(request.comment())) {
@@ -289,22 +290,23 @@ public class PassageService {
             return PassageMapper.toCircuit(
                     fileRepository.findByIdWithDetails(fileId).orElse(file),
                     filePassageRepository.findByFileIdWithDetails(fileId),
-                    delaiService);
+                    delaiService,
+                    clockService.now());
         }
 
         int currentStage = passage.getStepOrder();
 
         if (!PassageStageHelper.isStageComplete(allPassages, currentStage)) {
-            return PassageMapper.toCircuit(file, allPassages, delaiService);
+            return PassageMapper.toCircuit(file, allPassages, delaiService, clockService.now());
         }
 
         Integer nextStage = PassageStageHelper.nextStage(allPassages, currentStage);
         if (nextStage == null) {
-            return PassageMapper.toCircuit(file, allPassages, delaiService);
+            return PassageMapper.toCircuit(file, allPassages, delaiService, clockService.now());
         }
 
         activateStage(file, allPassages, nextStage, request.nextResponsibleUserId(), request.nextAssignments(), now);
-        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
     @Transactional
@@ -323,7 +325,7 @@ public class PassageService {
         }
         int previousStage = currentStage - 1;
 
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         passage.setStatus(PassageStatus.RETURNED);
         passage.setReturnReason(request.reason().trim());
         passage.setTransmittedAt(now);
@@ -332,7 +334,7 @@ public class PassageService {
         resetStageToPending(allPassages, currentStage);
         reactivateStage(allPassages, previousStage, now);
 
-        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
     @Transactional
@@ -347,7 +349,7 @@ public class PassageService {
         }
         assertCanAct(passage, actor);
 
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         passage.setStatus(PassageStatus.SUSPENDED);
         passage.setSuspendedAt(now);
         passage.setComment(request.reason().trim());
@@ -358,7 +360,7 @@ public class PassageService {
         file.setExternalHoldSince(now);
         fileRepository.save(file);
 
-        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
     @Transactional
@@ -370,7 +372,7 @@ public class PassageService {
         }
         assertCanAct(passage, actor);
 
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         passage.setStatus(PassageStatus.IN_PROGRESS);
         passage.setResumedAt(now);
         if (passage.getDueAt() != null && passage.getSuspendedAt() != null) {
@@ -384,7 +386,7 @@ public class PassageService {
         file.setExternalHoldSince(null);
         fileRepository.save(file);
 
-        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
     @Transactional
@@ -405,7 +407,7 @@ public class PassageService {
 
         passage.setResponsibleUser(newResponsible);
         filePassageRepository.save(passage);
-        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
     @Transactional
@@ -416,7 +418,7 @@ public class PassageService {
         assertCanAct(passage, actor);
         passage.setInternalComment(request.internalComment());
         filePassageRepository.save(passage);
-        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService);
+        return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
     private void completePassage(FilePassage passage, String comment, Instant now) {

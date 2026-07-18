@@ -17,10 +17,12 @@ import com.nanotech.flux_pro_backend.repository.AlertRuleRepository;
 import com.nanotech.flux_pro_backend.repository.FilePassageRepository;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
 import com.nanotech.flux_pro_backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -38,7 +40,6 @@ import java.util.UUID;
  * AlertRule.targetMode / targetRole (jamais un rôle codé en dur, cf. §8.3).
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AlertEngineService {
 
@@ -49,19 +50,63 @@ public class AlertEngineService {
     private final AlertRuleRepository alertRuleRepository;
     private final AlertRepository alertRepository;
     private final DelaiService delaiService;
+    private final ClockService clockService;
     private final ResponsibleUserResolver responsibleUserResolver;
     private final NotificationService notificationService;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final TransactionTemplate requiresNewTx;
 
-    @Transactional
+    public AlertEngineService(
+            FilePassageRepository filePassageRepository,
+            AlertRuleRepository alertRuleRepository,
+            AlertRepository alertRepository,
+            DelaiService delaiService,
+            ClockService clockService,
+            ResponsibleUserResolver responsibleUserResolver,
+            NotificationService notificationService,
+            OrganizationRepository organizationRepository,
+            UserRepository userRepository,
+            EmailService emailService,
+            PlatformTransactionManager transactionManager) {
+        this.filePassageRepository = filePassageRepository;
+        this.alertRuleRepository = alertRuleRepository;
+        this.alertRepository = alertRepository;
+        this.delaiService = delaiService;
+        this.clockService = clockService;
+        this.responsibleUserResolver = responsibleUserResolver;
+        this.notificationService = notificationService;
+        this.organizationRepository = organizationRepository;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.requiresNewTx = new TransactionTemplate(transactionManager);
+        this.requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    /**
+     * Pas de transaction englobante : chaque passage est évalué en REQUIRES_NEW
+     * pour qu'un échec (SMTP, règle) ne rollback pas les alertes des autres.
+     */
     public void evaluateAll() {
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         List<FilePassage> candidates = filePassageRepository.findActiveCandidatesForAlerts();
         for (FilePassage passage : candidates) {
-            evaluatePassage(passage, now);
+            UUID passageId = passage.getId();
+            try {
+                requiresNewTx.executeWithoutResult(status -> evaluatePassageById(passageId, now));
+            } catch (Exception e) {
+                log.error("ALR: échec d'évaluation du passage {} : {}", passageId, e.getMessage(), e);
+            }
         }
+    }
+
+    private void evaluatePassageById(UUID passageId, Instant now) {
+        FilePassage passage = filePassageRepository.findById(passageId).orElse(null);
+        if (passage == null) {
+            return;
+        }
+        evaluatePassage(passage, now);
     }
 
     private void evaluatePassage(FilePassage passage, Instant now) {
@@ -72,19 +117,32 @@ public class AlertEngineService {
         }
         List<AlertRule> rules = alertRuleRepository.findByChainTemplateIdAndActiveTrue(template.getId());
         for (AlertRule rule : rules) {
-            if (!appliesToStep(rule, passage) || !appliesToPriority(rule, file)) {
-                continue;
+            try {
+                if (!appliesToStep(rule, passage) || !appliesToPriority(rule, file)) {
+                    continue;
+                }
+                Instant threshold = delaiService.applyOffset(
+                        passage.getDueAt(), rule.getOffsetValue(), rule.getOffsetUnit());
+                if (now.isBefore(threshold)) {
+                    continue;
+                }
+                User recipient = resolveRecipient(rule, passage, file);
+                if (recipient == null) {
+                    log.warn(
+                            "ALR: aucun destinataire résolu pour la règle {} (passage {})",
+                            rule.getId(),
+                            passage.getId());
+                    continue;
+                }
+                triggerAlert(passage, file, rule, recipient);
+            } catch (Exception e) {
+                log.error(
+                        "ALR: règle {} échouée pour passage {} : {}",
+                        rule.getId(),
+                        passage.getId(),
+                        e.getMessage(),
+                        e);
             }
-            Instant threshold = delaiService.applyOffset(passage.getDueAt(), rule.getOffsetValue(), rule.getOffsetUnit());
-            if (now.isBefore(threshold)) {
-                continue;
-            }
-            User recipient = resolveRecipient(rule, passage, file);
-            if (recipient == null) {
-                log.warn("ALR: aucun destinataire résolu pour la règle {} (passage {})", rule.getId(), passage.getId());
-                continue;
-            }
-            triggerAlert(passage, file, rule, recipient);
         }
     }
 
@@ -136,7 +194,7 @@ public class AlertEngineService {
      */
     @Transactional(readOnly = true)
     public void runDailyDigest(UserRole digestRole) {
-        Instant now = Instant.now();
+        Instant now = clockService.now();
         List<FilePassage> overduePassages = filePassageRepository.findOverdueForDigest(now);
         if (overduePassages.isEmpty()) {
             return;

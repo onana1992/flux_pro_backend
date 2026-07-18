@@ -252,6 +252,10 @@ INSERT INTO chain_step_templates (
 (UNHEX(REPLACE('d1000000-0000-4000-8000-000000000641', '-', '')), @t06, 4, 'Clôture', 'AGENT',
  0, 'WORKING_DAYS', 'Clôturer le dossier', FALSE, TRUE, NOW(6), NOW(6));
 
+-- 3bis. Règles d'alerte T01–T06 :
+--      exécuter ensuite docs/sql/2026-07-14_seed_alert_rules_t01_t06.sql
+--      (CDC §10.2 en j.o. ; profil heures pour T02)
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 4. DOSSIERS DE DÉMONSTRATION
 -- ═══════════════════════════════════════════════════════════════════════════

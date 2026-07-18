@@ -20,8 +20,7 @@ public final class PassageMapper {
     }
 
     public static FilePassageCircuitResponse toCircuit(
-            FileEntity file, List<FilePassage> passages, DelaiService delaiService) {
-        Instant now = Instant.now();
+            FileEntity file, List<FilePassage> passages, DelaiService delaiService, Instant now) {
         List<FilePassage> active = PassageStageHelper.activePassages(passages);
         Integer currentStage = active.stream()
                 .map(FilePassage::getStepOrder)

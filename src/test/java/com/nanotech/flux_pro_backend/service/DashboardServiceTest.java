@@ -62,6 +62,8 @@ class DashboardServiceTest {
     @Mock
     private DelaiService delaiService;
     @Mock
+    private ClockService clockService;
+    @Mock
     private SecurityUser actor;
 
     @InjectMocks
@@ -73,6 +75,7 @@ class DashboardServiceTest {
         lenient().when(actor.getRole()).thenReturn(UserRole.DIRECTOR);
         lenient().when(actor.getOrganizationCode()).thenReturn("DIER");
         lenient().when(actor.getOrganizationId()).thenReturn(UUID.randomUUID());
+        lenient().when(clockService.now()).thenAnswer(inv -> Instant.now());
     }
 
     @Test

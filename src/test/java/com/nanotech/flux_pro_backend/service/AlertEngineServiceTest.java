@@ -25,14 +25,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -50,6 +55,8 @@ class AlertEngineServiceTest {
     @Mock
     private DelaiService delaiService;
     @Mock
+    private ClockService clockService;
+    @Mock
     private ResponsibleUserResolver responsibleUserResolver;
     @Mock
     private NotificationService notificationService;
@@ -59,6 +66,8 @@ class AlertEngineServiceTest {
     private UserRepository userRepository;
     @Mock
     private EmailService emailService;
+    @Mock
+    private PlatformTransactionManager transactionManager;
 
     @InjectMocks
     private AlertEngineService alertEngineService;
@@ -104,6 +113,14 @@ class AlertEngineServiceTest {
                 .thenReturn(List.of(AlertChannel.IN_APP, AlertChannel.EMAIL));
         org.mockito.Mockito.lenient().when(alertRepository.save(any(Alert.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        org.mockito.Mockito.lenient().when(clockService.now()).thenAnswer(inv -> Instant.now());
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        lenient().doNothing().when(transactionManager).commit(any());
+        lenient().doNothing().when(transactionManager).rollback(any());
+        lenient().when(filePassageRepository.findById(any())).thenAnswer(inv -> {
+            UUID id = inv.getArgument(0);
+            return id.equals(passage.getId()) ? Optional.of(passage) : Optional.empty();
+        });
     }
 
     private AlertRule ruleCurrentResponsible(Instant now, int offsetValue) {
