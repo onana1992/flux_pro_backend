@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<body>
+<!-- Fragments partagés — inclus via th:replace="~{fragments :: name}" -->
+
+<th:block th:fragment="header">
+  <tr>
+    <td th:style="'background:' + ${palette.headerBg} + ';padding:0;'">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:22px 28px 8px 28px;">
+            <p style="margin:0;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.72);font-weight:600;"
+               th:text="${m.productName}">FluxPro</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:4px 28px 22px 28px;">
+            <h1 style="margin:0;font-size:22px;line-height:1.35;font-weight:700;color:#ffffff;"
+                th:text="${m.alertLabel}">Alerte</h1>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td th:style="'height:4px;background:' + ${palette.accentBar} + ';font-size:0;line-height:0;'">&nbsp;</td>
+  </tr>
+</th:block>
+
+<th:block th:fragment="redirect">
+  <tr th:if="${m.redirectNotice != null}">
+    <td style="padding:14px 28px 0 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;">
+        <tr>
+          <td style="padding:10px 14px;font-size:12px;color:#9a3412;" th:text="${m.redirectNotice}">DEV</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</th:block>
+
+<th:block th:fragment="greeting">
+  <tr>
+    <td style="padding:24px 28px 8px 28px;">
+      <p style="margin:0;font-size:15px;line-height:1.55;color:#1a2332;">
+        <th:block th:if="${m.recipientFirstName != null and !#strings.isEmpty(m.recipientFirstName)}">
+          Bonjour <strong th:text="${m.recipientFirstName}">—</strong>,
+        </th:block>
+        <th:block th:unless="${m.recipientFirstName != null and !#strings.isEmpty(m.recipientFirstName)}">
+          Bonjour,
+        </th:block>
+      </p>
+      <p style="margin:12px 0 0 0;font-size:15px;line-height:1.6;color:#3d4a5c;" th:text="${m.intro}">Intro</p>
+    </td>
+  </tr>
+</th:block>
+
+<th:block th:fragment="file-card">
+  <tr th:if="${m.fileReference != null}">
+    <td style="padding:12px 28px 8px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f9fb;border:1px solid #e2e8f0;border-radius:10px;">
+        <tr>
+          <td style="padding:16px 18px;">
+            <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;font-weight:700;">Dossier</p>
+            <p style="margin:0;font-size:16px;font-weight:700;color:#0f172a;font-family:Consolas,'Courier New',monospace;"
+               th:text="${m.fileReference}">REF</p>
+            <p style="margin:8px 0 0 0;font-size:14px;line-height:1.45;color:#334155;" th:text="${m.fileSubject}">Objet</p>
+          </td>
+        </tr>
+        <tr th:if="${m.stepLabel != null or m.dueAtFormatted != null or m.responsibleName != null or m.escalationLevel != null or m.overdueWorkingDays != null}">
+          <td style="padding:0 18px 14px 18px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e2e8f0;">
+              <tr th:if="${m.stepLabel != null}">
+                <td style="padding-top:12px;font-size:13px;color:#64748b;width:38%;">Maillon</td>
+                <td style="padding-top:12px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;" th:text="${m.stepLabel}">Étape</td>
+              </tr>
+              <tr th:if="${m.dueAtFormatted != null}">
+                <td style="padding-top:8px;font-size:13px;color:#64748b;">Échéance</td>
+                <td style="padding-top:8px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;" th:text="${m.dueAtFormatted}">—</td>
+              </tr>
+              <tr th:if="${m.overdueWorkingDays != null}">
+                <td style="padding-top:8px;font-size:13px;color:#64748b;">Retard</td>
+                <td style="padding-top:8px;font-size:13px;color:#b45309;font-weight:700;text-align:right;">
+                  <span th:text="${m.overdueWorkingDays}">0</span>&#160;j. ouvré(s)
+                </td>
+              </tr>
+              <tr th:if="${m.responsibleName != null}">
+                <td style="padding-top:8px;font-size:13px;color:#64748b;">Responsable</td>
+                <td style="padding-top:8px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;" th:text="${m.responsibleName}">—</td>
+              </tr>
+              <tr th:if="${m.escalationLevel != null}">
+                <td style="padding-top:8px;font-size:13px;color:#64748b;">Niveau d'escalade</td>
+                <td style="padding-top:8px;font-size:13px;color:#9f1239;font-weight:700;text-align:right;" th:text="${m.escalationLevel}">1</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</th:block>
+
+<th:block th:fragment="cta">
+  <tr th:if="${m.fileUrl != null and !#strings.isEmpty(m.fileUrl)}">
+    <td style="padding:20px 28px 8px 28px;" align="center">
+      <a th:href="${m.fileUrl}"
+         th:text="${m.ctaLabel}"
+         th:style="'display:inline-block;background:' + ${palette.buttonBg} + ';color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;'">
+        Ouvrir le dossier
+      </a>
+    </td>
+  </tr>
+</th:block>
+
+<th:block th:fragment="footer">
+  <tr>
+    <td style="padding:24px 28px 28px 28px;">
+      <p style="margin:0;font-size:13px;line-height:1.5;color:#64748b;">
+        Ce message a été généré automatiquement par
+        <strong style="color:#334155;" th:text="${m.productName}">FluxPro</strong>.
+        Merci de ne pas y répondre directement.
+      </p>
+      <p style="margin:10px 0 0 0;font-size:11px;color:#94a3b8;" th:if="${m.tenantBadge != null}" th:text="${m.tenantBadge}">Badge</p>
+    </td>
+  </tr>
+</th:block>
+
+</body>
+</html>

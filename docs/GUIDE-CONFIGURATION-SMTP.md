@@ -32,6 +32,8 @@ spring.mail.properties.mail.smtp.starttls.enable=true
 fluxpro.alerts.from-address=${FLUXPRO_ALERTS_FROM:alertes@mintp.cm}
 # Dev : redirection de tous les e-mails (laisser vide en prod)
 fluxpro.alerts.email-redirect-to=${FLUXPRO_EMAIL_REDIRECT_TO:}
+# URL front pour liens CTA dans les emails
+fluxpro.alerts.app-base-url=${FLUXPRO_APP_BASE_URL:http://localhost:3000}
 ```
 
 ### Signification
@@ -45,7 +47,8 @@ fluxpro.alerts.email-redirect-to=${FLUXPRO_EMAIL_REDIRECT_TO:}
 | `mail.smtp.auth` | — | `true` | Authentification SMTP obligatoire |
 | `mail.smtp.starttls.enable` | — | `true` | Chiffrement STARTTLS (port 587) |
 | `fluxpro.alerts.from-address` | `FLUXPRO_ALERTS_FROM` | `alertes@mintp.cm` | Adresse expéditeur (`From:`) |
-| `fluxpro.alerts.email-redirect-to` | `FLUXPRO_EMAIL_REDIRECT_TO` | *(vide)* | Si renseigné : **tous** les e-mails (alertes + digest) partent vers cette adresse ; le destinataire prévu est indiqué en tête du corps |
+| `fluxpro.alerts.email-redirect-to` | `FLUXPRO_EMAIL_REDIRECT_TO` | *(vide)* | Si renseigné : **tous** les e-mails (alertes + digest) partent vers cette adresse ; le destinataire prévu est indiqué en bandeau HTML |
+| `fluxpro.alerts.app-base-url` | `FLUXPRO_APP_BASE_URL` | `http://localhost:3000` | Base URL du front pour les boutons « Ouvrir le dossier » (sans slash final) |
 
 La syntaxe `${NOM_VAR:valeur_par_défaut}` lit d’abord la variable d’environnement ; si elle est absente, la valeur après `:` est utilisée.
 
@@ -178,5 +181,26 @@ ALR: digest échoué pour <email> : ...
 ## 9. Références
 
 - Spec fonctionnelle : [`SPEC-ALR.md`](./SPEC-ALR.md) §9.2 (Email), §9.3 (Digest)
-- Code : `service/EmailService.java`, `service/NotificationService.java`
+- Code : `service/EmailService.java`, `service/EmailTemplateService.java`, `service/NotificationService.java`
+- Gabarits HTML : `src/main/resources/templates/email/` (`alert-reminder`, `alert-overdue`, `alert-escalation`, `alert-daily-digest`, `passage-arrival`, `passage-cc`, `alert-generic`)
 - Config : `src/main/resources/application.properties` (section ALR)
+
+---
+
+## 10. Gabarits email (`emailTemplateCode`)
+
+Le corps des e-mails est rendu en **HTML** via Thymeleaf. Le fichier utilisé est :
+
+`templates/email/{AlertType.emailTemplateCode}.html`
+
+Si le code est vide ou le fichier absent → `alert-generic.html`.
+
+| Code seed | Usage |
+|-----------|--------|
+| `alert-reminder` | Rappel avant échéance |
+| `alert-overdue` | Dépassement |
+| `alert-escalation` | Escalade |
+| `alert-daily-digest` | Digest quotidien (tableau) |
+| `passage-arrival` | Arrivée sur maillon |
+| `passage-cc` | Copie informée |
+| `alert-generic` | Repli / type admin sans gabarit |

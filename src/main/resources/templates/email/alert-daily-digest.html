@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title th:text="${m.alertLabel}">Récapitulatif</title>
+</head>
+<body style="margin:0;padding:0;background:#eef1f4;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;color:#1a2332;-webkit-font-smoothing:antialiased;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef1f4;padding:28px 12px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(26,35,50,0.08);">
+        <th:block th:replace="~{fragments :: header}"></th:block>
+        <th:block th:replace="~{fragments :: redirect}"></th:block>
+        <th:block th:replace="~{fragments :: greeting}"></th:block>
+
+        <tr>
+          <td style="padding:8px 24px 4px 24px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+              <tr style="background:#0b1f33;">
+                <th align="left" style="padding:10px 12px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#93c5fd;font-weight:700;">N°</th>
+                <th align="left" style="padding:10px 12px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#93c5fd;font-weight:700;">Objet</th>
+                <th align="left" style="padding:10px 12px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#93c5fd;font-weight:700;">Maillon</th>
+                <th align="left" style="padding:10px 12px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#93c5fd;font-weight:700;">Responsable</th>
+                <th align="right" style="padding:10px 12px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#93c5fd;font-weight:700;">Retard</th>
+              </tr>
+              <tr th:each="item, iter : ${m.digestItems}"
+                  th:style="${iter.odd} ? 'background:#ffffff;' : 'background:#f8fafc;'">
+                <td style="padding:11px 12px;font-size:12px;font-family:Consolas,'Courier New',monospace;font-weight:700;color:#0f172a;border-top:1px solid #e2e8f0;">
+                  <a th:if="${item.fileUrl != null}" th:href="${item.fileUrl}" th:text="${item.fileReference}" style="color:#1e3a5f;text-decoration:none;">REF</a>
+                  <span th:unless="${item.fileUrl != null}" th:text="${item.fileReference}">REF</span>
+                </td>
+                <td style="padding:11px 12px;font-size:12px;color:#334155;border-top:1px solid #e2e8f0;" th:text="${item.fileSubject}">Objet</td>
+                <td style="padding:11px 12px;font-size:12px;color:#475569;border-top:1px solid #e2e8f0;" th:text="${item.stepLabel}">Maillon</td>
+                <td style="padding:11px 12px;font-size:12px;color:#475569;border-top:1px solid #e2e8f0;" th:text="${item.responsibleName}">—</td>
+                <td align="right" style="padding:11px 12px;font-size:12px;font-weight:700;color:#b45309;border-top:1px solid #e2e8f0;white-space:nowrap;">
+                  <span th:text="${item.overdueWorkingDays}">0</span>&#160;j
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <th:block th:replace="~{fragments :: cta}"></th:block>
+        <th:block th:replace="~{fragments :: footer}"></th:block>
+      </table>
+      <p style="margin:16px 0 0 0;font-size:11px;color:#94a3b8;" th:text="${m.productName}">FluxPro</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title th:text="${m.alertLabel}">Notification</title>
+</head>
+<body style="margin:0;padding:0;background:#eef1f4;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;color:#1a2332;-webkit-font-smoothing:antialiased;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef1f4;padding:28px 12px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(26,35,50,0.08);">
+        <th:block th:replace="~{standard-body :: standard-body}"></th:block>
+      </table>
+      <p style="margin:16px 0 0 0;font-size:11px;color:#94a3b8;" th:text="${m.productName}">FluxPro</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

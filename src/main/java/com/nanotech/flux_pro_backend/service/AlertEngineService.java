@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -54,7 +53,6 @@ public class AlertEngineService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final AlertDigestRecipientRoleService digestRecipientRoleService;
-    private final TenantSettingsService tenantSettingsService;
     private final TransactionTemplate requiresNewTx;
 
     public AlertEngineService(
@@ -70,7 +68,6 @@ public class AlertEngineService {
             UserRepository userRepository,
             EmailService emailService,
             AlertDigestRecipientRoleService digestRecipientRoleService,
-            TenantSettingsService tenantSettingsService,
             PlatformTransactionManager transactionManager) {
         this.filePassageRepository = filePassageRepository;
         this.alertRuleRepository = alertRuleRepository;
@@ -84,7 +81,6 @@ public class AlertEngineService {
         this.userRepository = userRepository;
         this.emailService = emailService;
         this.digestRecipientRoleService = digestRecipientRoleService;
-        this.tenantSettingsService = tenantSettingsService;
         this.requiresNewTx = new TransactionTemplate(transactionManager);
         this.requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -229,9 +225,8 @@ public class AlertEngineService {
             try {
                 emailService.sendDigest(
                         recipient.getEmail(),
-                        "[" + tenantSettingsService.productName()
-                                + "] Récapitulatif quotidien des retards (" + scoped.size() + ")",
-                        buildDigestBody(scoped, now));
+                        recipient.getFirstName(),
+                        emailService.buildDigestItems(scoped, now));
             } catch (Exception e) {
                 log.warn("ALR: digest échoué pour {} : {}", recipient.getEmail(), e.getMessage());
             }
@@ -251,24 +246,5 @@ public class AlertEngineService {
                 collectDescendants(child.getId(), ids);
             }
         }
-    }
-
-    private String buildDigestBody(List<FilePassage> scoped, Instant now) {
-        DateTimeFormatter dueDateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-                .withZone(tenantSettingsService.zoneId());
-        StringBuilder sb = new StringBuilder("Dossiers en retard :\n\n");
-        for (FilePassage passage : scoped) {
-            FileEntity file = passage.getFile();
-            int workingDaysLate = delaiService.countWorkingDays(passage.getDueAt(), now);
-            sb.append("- ").append(file.getReferenceNumber())
-                    .append(" — ").append(file.getSubject())
-                    .append(" — étape : ").append(passage.getChainStepTemplate().getLabel())
-                    .append(" — échéance : ").append(dueDateFormat.format(passage.getDueAt()))
-                    .append(" — retard : ").append(workingDaysLate).append(" j. ouvré(s)\n");
-        }
-        sb.append("\nConnectez-vous à ")
-                .append(tenantSettingsService.productName())
-                .append(" pour plus de détails.");
-        return sb.toString();
     }
 }

@@ -71,8 +71,6 @@ class AlertEngineServiceTest {
     @Mock
     private AlertDigestRecipientRoleService digestRecipientRoleService;
     @Mock
-    private TenantSettingsService tenantSettingsService;
-    @Mock
     private PlatformTransactionManager transactionManager;
 
     @InjectMocks

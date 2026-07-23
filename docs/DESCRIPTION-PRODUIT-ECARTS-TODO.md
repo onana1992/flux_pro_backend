@@ -221,7 +221,7 @@ Priorisation indicative : **P0** = pilote / crédibilité · **P1** = post-pilot
 
 ### 5.4 Alertes & notifications — P1 / P2
 
-- [ ] **P1** — Vrais gabarits email (`emailTemplateCode`) au lieu du corps construit en dur
+- [x] **P1** — Vrais gabarits email (`emailTemplateCode`) au lieu du corps construit en dur
 - [ ] **P1** — Journal audit `ALERT_SENT` si exigé SPEC-AUD
 - [ ] **P2** — Canal SMS (opérateur local)
 - [ ] **P2** — Préférences de notification utilisateur (UI)
@@ -261,7 +261,7 @@ Priorisation indicative : **P0** = pilote / crédibilité · **P1** = post-pilot
 | FluxPro est-il une GED ? | **Oui** — Gestion Électronique des **Dossiers** |
 | Faut-il un BPM ? | **Non** — templates + étapes parallèles (join AND) ; [décision officielle](./DECISION-TEMPLATES-PARALLELES-VS-BPM.md) |
 | Écart principal description ancienne vs code | Ancienne description = plateforme GED/BPM multi-secteurs ; code = passation + SLA MINTP |
-| Priorité prochaine | Archivage clair, reporting PDF, MinIO pour PJ, gabarits email |
+| Priorité prochaine | Archivage clair, reporting PDF, MinIO pour PJ |
 
 ---
 
@@ -278,3 +278,4 @@ Priorisation indicative : **P0** = pilote / crédibilité · **P1** = post-pilot
 | 2026-07-22 | Équipe produit / tech | CHN-09 CC + notifs d'arrivée maillon ✅ (`PASSAGE_ARRIVAL` / `PASSAGE_CC`, `file_passage_cc`) |
 | 2026-07-22 | Équipe produit / tech | Décision officielle templates + étapes parallèles vs BPM ✅ → [DECISION-TEMPLATES-PARALLELES-VS-BPM.md](./DECISION-TEMPLATES-PARALLELES-VS-BPM.md) |
 | 2026-07-22 | Équipe produit / tech | Guide admin onboarding hors MINTP ✅ : type → template → alertes → [GUIDE-ADMIN-ONBOARDING-TYPE-TEMPLATE-ALERTES.md](./GUIDE-ADMIN-ONBOARDING-TYPE-TEMPLATE-ALERTES.md) |
+| 2026-07-23 | Équipe produit / tech | Gabarits email HTML (`emailTemplateCode` + Thymeleaf) ✅ — `templates/email/*` |
