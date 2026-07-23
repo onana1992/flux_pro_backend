@@ -61,6 +61,7 @@ public class PassageService {
     private final ClockService clockService;
     private final PassageAuthorityService passageAuthorityService;
     private final AccessControlService accessControlService;
+    private final PassageArrivalNotificationService arrivalNotificationService;
 
     @Transactional
     public FilePassageCircuitResponse initializeChainForFile(
@@ -111,6 +112,7 @@ public class PassageService {
         }
 
         Map<UUID, User> usersById = loadResponsibleUsers(assignments.values());
+        Map<UUID, List<UUID>> ccByStepId = toCcByStepMap(request.assignments());
         Set<UUID> ministryOrgIds = new LinkedHashSet<>(collectMinistryOrganizationIds(file.getOrganization()));
         for (UUID userId : assignments.values()) {
             User responsible = usersById.get(userId);
@@ -123,7 +125,7 @@ public class PassageService {
 
         file.setChainTemplate(template);
         fileRepository.save(file);
-        initializeChain(file, steps, assignments, usersById);
+        initializeChain(file, steps, assignments, usersById, ccByStepId, ministryOrgIds);
         return getCircuit(fileId, actor);
     }
 
@@ -240,7 +242,9 @@ public class PassageService {
             FileEntity file,
             List<ChainStepTemplate> steps,
             Map<UUID, UUID> assignments,
-            Map<UUID, User> usersById) {
+            Map<UUID, User> usersById,
+            Map<UUID, List<UUID>> ccByStepId,
+            Set<UUID> ministryOrgIds) {
         Instant now = clockService.now();
         Integer firstStage = PassageStageHelper.distinctStagesFromSteps(steps).stream()
                 .findFirst()
@@ -252,14 +256,19 @@ public class PassageService {
             passage.setChainStepTemplate(step);
             passage.setStepOrder(step.getStepOrder());
             passage.setResponsibleUser(responsible);
+            List<UUID> ccIds = ccByStepId.getOrDefault(step.getId(), List.of());
+            passage.setCcUsers(resolveCcUsers(
+                    ccIds, ministryOrgIds, responsible != null ? responsible.getId() : null));
             if (step.getStepOrder() == firstStage) {
                 passage.setStatus(PassageStatus.IN_PROGRESS);
                 passage.setReceivedAt(now);
                 passage.setDueAt(delaiService.calculateDueDate(now, step.getDelayValue(), step.getDelayUnit()));
+                filePassageRepository.save(passage);
+                arrivalNotificationService.notifyArrival(passage);
             } else {
                 passage.setStatus(PassageStatus.PENDING);
+                filePassageRepository.save(passage);
             }
-            filePassageRepository.save(passage);
         }
     }
 
@@ -305,7 +314,14 @@ public class PassageService {
             return PassageMapper.toCircuit(file, allPassages, delaiService, clockService.now());
         }
 
-        activateStage(file, allPassages, nextStage, request.nextResponsibleUserId(), request.nextAssignments(), now);
+        activateStage(
+                file,
+                allPassages,
+                nextStage,
+                request.nextResponsibleUserId(),
+                request.nextAssignments(),
+                request.nextCcUserIds(),
+                now);
         return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
@@ -407,6 +423,7 @@ public class PassageService {
 
         passage.setResponsibleUser(newResponsible);
         filePassageRepository.save(passage);
+        arrivalNotificationService.notifyArrival(passage);
         return PassageMapper.toCircuit(file, filePassageRepository.findByFileIdWithDetails(fileId), delaiService, clockService.now());
     }
 
@@ -462,10 +479,13 @@ public class PassageService {
             int stageOrder,
             UUID nextResponsibleUserId,
             List<PassageNextAssignmentRequest> nextAssignments,
+            List<UUID> nextCcUserIds,
             Instant now) {
         List<FilePassage> stagePassages = PassageStageHelper.passagesInStage(allPassages, stageOrder);
         Set<UUID> ministryOrgIds = new LinkedHashSet<>(collectMinistryOrganizationIds(file.getOrganization()));
         Map<UUID, UUID> overridesByPassageId = toNextAssignmentMap(nextAssignments);
+        Map<UUID, List<UUID>> ccByPassageId = toCcByPassageMap(nextAssignments);
+        List<UUID> defaultCc = nextCcUserIds != null ? nextCcUserIds : List.of();
         boolean singleStepStage = stagePassages.size() == 1;
 
         for (FilePassage stagePassage : stagePassages) {
@@ -473,7 +493,8 @@ public class PassageService {
             if (override == null && singleStepStage) {
                 override = nextResponsibleUserId;
             }
-            activateSinglePassage(stagePassage, override, ministryOrgIds, now);
+            List<UUID> ccIds = ccByPassageId.getOrDefault(stagePassage.getId(), defaultCc);
+            activateSinglePassage(stagePassage, override, ccIds, ministryOrgIds, now);
         }
     }
 
@@ -490,6 +511,7 @@ public class PassageService {
                     stagePassage.getChainStepTemplate().getDelayValue(),
                     stagePassage.getChainStepTemplate().getDelayUnit()));
             filePassageRepository.save(stagePassage);
+            arrivalNotificationService.notifyArrival(stagePassage);
         }
     }
 
@@ -512,7 +534,11 @@ public class PassageService {
     }
 
     private void activateSinglePassage(
-            FilePassage passage, UUID nextResponsibleUserId, Set<UUID> ministryOrgIds, Instant now) {
+            FilePassage passage,
+            UUID nextResponsibleUserId,
+            List<UUID> ccUserIds,
+            Set<UUID> ministryOrgIds,
+            Instant now) {
         ChainStepTemplate step = passage.getChainStepTemplate();
         User responsible;
         if (nextResponsibleUserId != null) {
@@ -536,7 +562,11 @@ public class PassageService {
         passage.setReceivedAt(now);
         passage.setResponsibleUser(responsible);
         passage.setDueAt(delaiService.calculateDueDate(now, step.getDelayValue(), step.getDelayUnit()));
+        if (ccUserIds != null) {
+            passage.setCcUsers(resolveCcUsers(ccUserIds, ministryOrgIds, responsible.getId()));
+        }
         filePassageRepository.save(passage);
+        arrivalNotificationService.notifyArrival(passage);
     }
 
     private Map<UUID, UUID> toAssignmentMap(List<ChainStepAssignmentRequest> assignments) {
@@ -565,6 +595,58 @@ public class PassageService {
             }
         }
         return map;
+    }
+
+    private Map<UUID, List<UUID>> toCcByStepMap(List<ChainStepAssignmentRequest> assignments) {
+        Map<UUID, List<UUID>> map = new HashMap<>();
+        if (assignments == null) {
+            return map;
+        }
+        for (ChainStepAssignmentRequest assignment : assignments) {
+            if (assignment.ccUserIds() != null && !assignment.ccUserIds().isEmpty()) {
+                map.put(assignment.chainStepTemplateId(), List.copyOf(assignment.ccUserIds()));
+            }
+        }
+        return map;
+    }
+
+    private Map<UUID, List<UUID>> toCcByPassageMap(List<PassageNextAssignmentRequest> nextAssignments) {
+        Map<UUID, List<UUID>> map = new HashMap<>();
+        if (nextAssignments == null) {
+            return map;
+        }
+        for (PassageNextAssignmentRequest assignment : nextAssignments) {
+            if (assignment.ccUserIds() != null && !assignment.ccUserIds().isEmpty()) {
+                map.put(assignment.passageId(), List.copyOf(assignment.ccUserIds()));
+            }
+        }
+        return map;
+    }
+
+    private List<User> resolveCcUsers(List<UUID> ccUserIds, Set<UUID> ministryOrgIds, UUID responsibleUserId) {
+        if (ccUserIds == null || ccUserIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        LinkedHashSet<UUID> uniqueIds = new LinkedHashSet<>(ccUserIds);
+        if (responsibleUserId != null) {
+            uniqueIds.remove(responsibleUserId);
+        }
+        List<User> resolved = new ArrayList<>();
+        for (UUID userId : uniqueIds) {
+            User user = userRepository.findByIdWithOrganization(userId)
+                    .orElseThrow(() -> FileException.badRequest("PASSAGE_USER_NOT_FOUND", "User not found"));
+            if (!user.isActive()) {
+                throw FileException.badRequest("PASSAGE_USER_INACTIVE", "User is inactive");
+            }
+            if (user.getOrganization() == null
+                    || !ministryOrgIds.contains(user.getOrganization().getId())) {
+                throw FileException.badRequest(
+                        "PASSAGE_USER_OUT_OF_SCOPE",
+                        "User must belong to the same ministry tree as the file");
+            }
+            resolved.add(user);
+        }
+        return resolved;
     }
 
     private Map<UUID, User> loadResponsibleUsers(Iterable<UUID> userIds) {

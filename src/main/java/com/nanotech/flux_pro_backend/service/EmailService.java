@@ -4,12 +4,10 @@ import com.nanotech.flux_pro_backend.common.AppException;
 import com.nanotech.flux_pro_backend.entity.Alert;
 import com.nanotech.flux_pro_backend.entity.User;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -21,17 +19,12 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class EmailService {
 
-    private static final DateTimeFormatter DATE_FORMAT =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withZone(ZoneId.of("Africa/Douala"));
-
     private final JavaMailSender mailSender;
-    private final String fromAddress;
+    private final TenantSettingsService tenantSettingsService;
 
-    public EmailService(
-            JavaMailSender mailSender,
-            @Value("${fluxpro.alerts.from-address:alertes@mintp.cm}") String fromAddress) {
+    public EmailService(JavaMailSender mailSender, TenantSettingsService tenantSettingsService) {
         this.mailSender = mailSender;
-        this.fromAddress = fromAddress;
+        this.tenantSettingsService = tenantSettingsService;
     }
 
     public void send(Alert alert) {
@@ -41,25 +34,46 @@ public class EmailService {
                     "ALERT_RECIPIENT_NO_EMAIL", "Recipient has no email address: " + recipient.getId(),
                     recipient.getId());
         }
+        String intendedTo = recipient.getEmail();
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(recipient.getEmail());
+        message.setFrom(tenantSettingsService.fromAddress());
+        message.setTo(resolveTo(intendedTo));
         message.setSubject(buildSubject(alert));
-        message.setText(buildBody(alert));
+        message.setText(withRedirectNotice(buildBody(alert), intendedTo));
         mailSender.send(message);
     }
 
     public void sendDigest(String toEmail, String subject, String body) {
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(toEmail);
+        message.setFrom(tenantSettingsService.fromAddress());
+        message.setTo(resolveTo(toEmail));
         message.setSubject(subject);
-        message.setText(body);
+        message.setText(withRedirectNotice(body, toEmail));
         mailSender.send(message);
     }
 
+    private String resolveTo(String intendedTo) {
+        String redirectTo = tenantSettingsService.emailRedirectTo();
+        if (redirectTo.isEmpty()) {
+            return intendedTo;
+        }
+        log.info("ALR: redirection email {} → {}", intendedTo, redirectTo);
+        return redirectTo;
+    }
+
+    private String withRedirectNotice(String body, String intendedTo) {
+        String redirectTo = tenantSettingsService.emailRedirectTo();
+        if (redirectTo.isEmpty() || intendedTo == null || intendedTo.equalsIgnoreCase(redirectTo)) {
+            return body;
+        }
+        return "[DEV — destinataire prévu : " + intendedTo + "]\n\n" + body;
+    }
+
     private String buildSubject(Alert alert) {
-        StringBuilder sb = new StringBuilder("[ChaîneFlux] ").append(alert.getAlertType().getLabel());
+        StringBuilder sb = new StringBuilder("[")
+                .append(tenantSettingsService.productName())
+                .append("] ")
+                .append(alert.getAlertType().getLabel());
         if (alert.getFile() != null && alert.getFile().getReferenceNumber() != null) {
             sb.append(" — ").append(alert.getFile().getReferenceNumber());
         }
@@ -67,6 +81,8 @@ public class EmailService {
     }
 
     private String buildBody(Alert alert) {
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+                .withZone(tenantSettingsService.zoneId());
         StringBuilder sb = new StringBuilder();
         sb.append(alert.getAlertType().getLabel()).append("\n\n");
         if (alert.getFile() != null) {
@@ -76,13 +92,15 @@ public class EmailService {
         if (alert.getFilePassage() != null) {
             sb.append("Étape : ").append(alert.getFilePassage().getChainStepTemplate().getLabel()).append("\n");
             if (alert.getFilePassage().getDueAt() != null) {
-                sb.append("Échéance : ").append(DATE_FORMAT.format(alert.getFilePassage().getDueAt())).append("\n");
+                sb.append("Échéance : ").append(dateFormat.format(alert.getFilePassage().getDueAt())).append("\n");
             }
         }
         if (alert.getEscalationLevel() != null) {
             sb.append("Niveau d'escalade : ").append(alert.getEscalationLevel()).append("\n");
         }
-        sb.append("\nConnectez-vous à ChaîneFlux pour traiter ce dossier.");
+        sb.append("\nConnectez-vous à ")
+                .append(tenantSettingsService.productName())
+                .append(" pour traiter ce dossier.");
         return sb.toString();
     }
 }

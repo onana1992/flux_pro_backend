@@ -30,7 +30,8 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/v3/api-docs.yaml",
             "/api/auth/login",
-            "/api/auth/refresh"
+            "/api/auth/refresh",
+            "/api/public/**"
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;

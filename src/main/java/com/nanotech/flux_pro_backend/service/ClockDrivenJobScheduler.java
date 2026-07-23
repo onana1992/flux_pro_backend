@@ -1,6 +1,5 @@
 package com.nanotech.flux_pro_backend.service;
 
-import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +37,6 @@ public class ClockDrivenJobScheduler {
 
     @Value("${fluxpro.alerts.digest.cron:0 30 7 * * MON-FRI}")
     private String digestCron;
-
-    @Value("${fluxpro.alerts.digest.target-role:DIRECTOR}")
-    private String digestTargetRole;
 
     private final AtomicReference<Instant> cursor = new AtomicReference<>();
 
@@ -102,15 +98,15 @@ public class ClockDrivenJobScheduler {
                 "daily-digest",
                 from,
                 now,
-                () -> alertEngineService.runDailyDigest(UserRole.valueOf(digestTargetRole)));
+                alertEngineService::runDailyDigest);
 
         cursor.set(now);
     }
 
     private void fireBetween(
             CronExpression cron, String jobName, Instant from, Instant toInclusive, Runnable job) {
-        ZonedDateTime cursorZ = from.atZone(ClockService.BUSINESS_ZONE);
-        ZonedDateTime endZ = toInclusive.atZone(ClockService.BUSINESS_ZONE);
+        ZonedDateTime cursorZ = from.atZone(clockService.zoneId());
+        ZonedDateTime endZ = toInclusive.atZone(clockService.zoneId());
         int fires = 0;
         ZonedDateTime next = cron.next(cursorZ);
         while (next != null && !next.isAfter(endZ) && fires < MAX_FIRES_PER_JOB_PER_CATCHUP) {

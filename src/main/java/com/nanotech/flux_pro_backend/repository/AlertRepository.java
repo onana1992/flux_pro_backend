@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,4 +56,20 @@ public interface AlertRepository extends JpaRepository<Alert, UUID> {
             ORDER BY a.createdAt DESC
             """)
     List<Alert> findByFileIdOrderByCreatedAtDesc(@Param("fileId") UUID fileId);
+
+    /** Idempotence des notifs d'arrivée pour une même activation (receivedAt). */
+    @Query("""
+            SELECT COUNT(a) > 0 FROM Alert a
+            WHERE a.filePassage.id = :passageId
+              AND a.alertType.id = :alertTypeId
+              AND a.recipient.id = :recipientId
+              AND a.channel = :channel
+              AND a.createdAt >= :since
+            """)
+    boolean existsArrivalNotification(
+            @Param("passageId") UUID passageId,
+            @Param("alertTypeId") UUID alertTypeId,
+            @Param("recipientId") UUID recipientId,
+            @Param("channel") AlertChannel channel,
+            @Param("since") Instant since);
 }

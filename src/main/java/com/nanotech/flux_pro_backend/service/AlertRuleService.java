@@ -90,6 +90,7 @@ public class AlertRuleService {
                     "ALERT_RULE_TARGET_ROLE_REQUIRED", "targetRole is required when targetMode = ROLE");
         }
         AlertType alertType = alertTypeService.getById(request.alertTypeId());
+        alertTypeService.assertAssignableToAlertRule(alertType);
         ChainStepTemplate step = null;
         if (request.chainStepTemplateId() != null) {
             step = chainStepTemplateRepository.findByIdAndChainTemplateId(request.chainStepTemplateId(), template.getId())

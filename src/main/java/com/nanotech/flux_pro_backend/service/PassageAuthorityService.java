@@ -4,12 +4,14 @@ import com.nanotech.flux_pro_backend.entity.FilePassage;
 import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.security.SecurityUser;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.EnumMap;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class PassageAuthorityService {
 
     private static final Map<UserRole, Integer> ROLE_RANK = new EnumMap<>(UserRole.class);
@@ -27,9 +29,11 @@ public class PassageAuthorityService {
         ROLE_RANK.put(UserRole.SUPER_ADMIN, 80);
     }
 
+    private final SubstituteService substituteService;
+
     /**
-     * Transmettre / retourner / suspendre : uniquement le responsable du maillon,
-     * ou SUPER_ADMIN / BUSINESS_ADMIN. Les autres rôles (même hiérarchiquement
+     * Transmettre / retourner / suspendre : le responsable du maillon, son suppléant actif
+     * (ORG-04), ou SUPER_ADMIN / BUSINESS_ADMIN. Les autres rôles (même hiérarchiquement
      * supérieurs) ne peuvent pas agir à la place du responsable.
      */
     public boolean canActOnPassage(SecurityUser actor, FilePassage passage) {
@@ -37,7 +41,13 @@ public class PassageAuthorityService {
             return true;
         }
         User responsible = passage.getResponsibleUser();
-        return responsible != null && actor.getId().equals(responsible.getId());
+        if (responsible == null) {
+            return false;
+        }
+        if (actor.getId().equals(responsible.getId())) {
+            return true;
+        }
+        return substituteService.isActiveSubstituteOf(actor.getId(), responsible);
     }
 
     /** Rang relatif des rôles — réutilisé pour l'escalade d'alertes (ALR). */

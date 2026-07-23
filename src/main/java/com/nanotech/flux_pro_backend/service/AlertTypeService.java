@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -22,18 +24,41 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AlertTypeService {
 
+    /**
+     * Types événementiels (arrivée maillon / CC) — hors périmètre des règles programmées ALR.
+     * Exclus de {@link #listActive()} et refusés à la création/modification d'une {@code AlertRule}.
+     */
+    public static final Set<String> EVENT_NOTIFICATION_TYPE_CODES = Set.of(
+            PassageArrivalNotificationService.TYPE_ARRIVAL,
+            PassageArrivalNotificationService.TYPE_CC);
+
     private final AlertTypeRepository alertTypeRepository;
     private final AlertRuleRepository alertRuleRepository;
     private final AlertRepository alertRepository;
 
     @Transactional(readOnly = true)
     public List<AlertType> listActive() {
-        return alertTypeRepository.findByActiveTrueOrderByLabelAsc();
+        return alertTypeRepository.findByActiveTrueOrderByLabelAsc().stream()
+                .filter(type -> !isEventNotificationType(type.getCode()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AlertType> listAll() {
         return alertTypeRepository.findAllByOrderByLabelAsc();
+    }
+
+    public static boolean isEventNotificationType(String code) {
+        return code != null && EVENT_NOTIFICATION_TYPE_CODES.contains(code.trim().toUpperCase(Locale.ROOT));
+    }
+
+    public void assertAssignableToAlertRule(AlertType type) {
+        if (isEventNotificationType(type.getCode())) {
+            throw AlertException.badRequest(
+                    "ALERT_TYPE_NOT_FOR_RULE",
+                    "Alert type cannot be used in a scheduled alert rule: " + type.getCode(),
+                    type.getCode());
+        }
     }
 
     @Transactional(readOnly = true)

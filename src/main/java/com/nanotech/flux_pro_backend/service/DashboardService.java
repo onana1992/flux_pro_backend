@@ -80,12 +80,12 @@ public class DashboardService {
                 .distinct()
                 .count();
 
-        ZonedDateTime monthStart = now.atZone(DelaiService.BUSINESS_ZONE)
-                .toLocalDate().withDayOfMonth(1).atStartOfDay(DelaiService.BUSINESS_ZONE);
+        ZonedDateTime monthStart = now.atZone(delaiService.zoneId())
+                .toLocalDate().withDayOfMonth(1).atStartOfDay(delaiService.zoneId());
         long closedThisMonth = fileRepository.countClosedBetween(
                 monthStart.toInstant(), now, scope.allOrgs(), scope.orgIds(), organizationId, fileTypeCode);
         long createdThisMonth = fileRepository.countReceivedBetween(
-                monthStart.toLocalDate(), now.atZone(DelaiService.BUSINESS_ZONE).toLocalDate(),
+                monthStart.toLocalDate(), now.atZone(delaiService.zoneId()).toLocalDate(),
                 scope.allOrgs(), scope.orgIds(), organizationId, fileTypeCode);
 
         return new DashboardSummaryResponse(
@@ -265,7 +265,7 @@ public class DashboardService {
     }
 
     private int actualDelayDays(FileEntity file) {
-        Instant received = file.getReceivedAt().atStartOfDay(DelaiService.BUSINESS_ZONE).toInstant();
+        Instant received = file.getReceivedAt().atStartOfDay(delaiService.zoneId()).toInstant();
         return delaiService.countWorkingDays(received, file.getClosedAt());
     }
 

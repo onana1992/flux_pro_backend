@@ -46,9 +46,34 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("""
             SELECT u FROM User u
             JOIN FETCH u.organization
+            LEFT JOIN FETCH u.substitute
             WHERE u.id = :id
             """)
     Optional<User> findByIdWithOrganization(@Param("id") UUID id);
+
+    @Query("""
+            SELECT u FROM User u
+            LEFT JOIN FETCH u.substitute
+            WHERE u.id = :id
+            """)
+    Optional<User> findByIdWithSubstitute(@Param("id") UUID id);
+
+    @Query("""
+            SELECT COUNT(u) > 0 FROM User u
+            WHERE u.id = :titularId
+              AND u.substitute.id = :substituteId
+              AND u.substitute.active = true
+            """)
+    boolean isActiveSubstitute(
+            @Param("titularId") UUID titularId,
+            @Param("substituteId") UUID substituteId);
+
+    @Query("""
+            SELECT u.id FROM User u
+            WHERE u.substitute.id = :substituteId
+              AND u.active = true
+            """)
+    List<UUID> findActiveUserIdsBySubstituteId(@Param("substituteId") UUID substituteId);
 
     @Query("""
             SELECT u FROM User u

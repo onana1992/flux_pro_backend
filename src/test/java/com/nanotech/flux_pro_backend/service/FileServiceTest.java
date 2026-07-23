@@ -64,6 +64,8 @@ class FileServiceTest {
     private AccessControlService accessControlService;
     @Mock
     private ClockService clockService;
+    @Mock
+    private TenantSettingsService tenantSettingsService;
 
     @InjectMocks
     private FileService fileService;
@@ -81,6 +83,7 @@ class FileServiceTest {
         lenient()
                 .when(clockService.nowZoned())
                 .thenReturn(ZonedDateTime.of(2026, 7, 15, 12, 0, 0, 0, ZoneId.of("Africa/Douala")));
+        lenient().when(tenantSettingsService.referencePrefix()).thenReturn("MINTP");
     }
 
     @Test

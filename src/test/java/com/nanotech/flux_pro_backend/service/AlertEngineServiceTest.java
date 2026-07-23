@@ -59,6 +59,8 @@ class AlertEngineServiceTest {
     @Mock
     private ResponsibleUserResolver responsibleUserResolver;
     @Mock
+    private SubstituteService substituteService;
+    @Mock
     private NotificationService notificationService;
     @Mock
     private OrganizationRepository organizationRepository;
@@ -66,6 +68,10 @@ class AlertEngineServiceTest {
     private UserRepository userRepository;
     @Mock
     private EmailService emailService;
+    @Mock
+    private AlertDigestRecipientRoleService digestRecipientRoleService;
+    @Mock
+    private TenantSettingsService tenantSettingsService;
     @Mock
     private PlatformTransactionManager transactionManager;
 
@@ -114,6 +120,7 @@ class AlertEngineServiceTest {
         org.mockito.Mockito.lenient().when(alertRepository.save(any(Alert.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         org.mockito.Mockito.lenient().when(clockService.now()).thenAnswer(inv -> Instant.now());
+        lenient().when(substituteService.effectiveRecipient(any())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
         lenient().doNothing().when(transactionManager).commit(any());
         lenient().doNothing().when(transactionManager).rollback(any());
@@ -205,6 +212,25 @@ class AlertEngineServiceTest {
         alertEngineService.evaluateAll();
 
         verify(responsibleUserResolver).resolve(file, UserRole.DIRECTOR);
+        verify(notificationService, times(2)).dispatch(any(Alert.class));
+    }
+
+    @Test
+    void evaluateAll_notifiesSubstitute_whenResponsibleHasActiveSubstitute() {
+        Instant now = Instant.now();
+        AlertRule rule = ruleCurrentResponsible(now, 0);
+        User substitute = new User();
+        substitute.setId(UUID.randomUUID());
+
+        when(filePassageRepository.findActiveCandidatesForAlerts()).thenReturn(List.of(passage));
+        when(alertRuleRepository.findByChainTemplateIdAndActiveTrue(template.getId())).thenReturn(List.of(rule));
+        when(delaiService.applyOffset(passage.getDueAt(), 0, DelayUnit.WORKING_DAYS)).thenReturn(passage.getDueAt());
+        when(alertRepository.existsByFilePassageIdAndAlertRuleIdAndChannel(any(), any(), any())).thenReturn(false);
+        when(substituteService.effectiveRecipient(responsible)).thenReturn(substitute);
+
+        alertEngineService.evaluateAll();
+
+        verify(substituteService).effectiveRecipient(responsible);
         verify(notificationService, times(2)).dispatch(any(Alert.class));
     }
 

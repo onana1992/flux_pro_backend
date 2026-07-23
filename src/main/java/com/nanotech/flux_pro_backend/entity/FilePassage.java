@@ -9,11 +9,15 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "file_passages")
@@ -66,4 +70,12 @@ public class FilePassage extends BaseEntity {
 
     @Column(name = "resumed_at")
     private Instant resumedAt;
+
+    /** Copies informées (CHN-09) — notifiées à l'arrivée, sans droit de transmission. */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "file_passage_cc",
+            joinColumns = @JoinColumn(name = "file_passage_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private List<User> ccUsers = new ArrayList<>();
 }

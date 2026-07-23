@@ -66,6 +66,11 @@ public final class RbacPermissions {
     public static final String ALERT_RULES_UPDATE = "ALERT_RULES:UPDATE";
     public static final String ALERT_RULES_DELETE = "ALERT_RULES:DELETE";
 
+    public static final String BUSINESS_CALENDAR_READ = "BUSINESS_CALENDAR:READ";
+    public static final String BUSINESS_CALENDAR_CREATE = "BUSINESS_CALENDAR:CREATE";
+    public static final String BUSINESS_CALENDAR_UPDATE = "BUSINESS_CALENDAR:UPDATE";
+    public static final String BUSINESS_CALENDAR_DELETE = "BUSINESS_CALENDAR:DELETE";
+
     public static final String DASHBOARD_READ = "DASHBOARD:READ";
     public static final String DASHBOARD_EXPORT = "DASHBOARD:EXPORT";
 }

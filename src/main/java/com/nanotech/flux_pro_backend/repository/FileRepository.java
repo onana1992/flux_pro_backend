@@ -41,7 +41,13 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
                     OR f.createdBy.id = :userId
                     OR EXISTS (
                         SELECT 1 FROM FilePassage p
-                        WHERE p.file = f AND p.responsibleUser.id = :userId
+                        WHERE p.file = f AND (
+                            p.responsibleUser.id = :userId
+                            OR (
+                                p.responsibleUser.substitute.id = :userId
+                                AND p.responsibleUser.substitute.active = true
+                            )
+                        )
                     )
                   )
               AND (:organizationId IS NULL OR f.organization.id = :organizationId)

@@ -18,6 +18,16 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
 
     boolean existsByFileIdAndResponsibleUserId(UUID fileId, UUID responsibleUserId);
 
+    @Query("""
+            SELECT COUNT(p) > 0 FROM FilePassage p
+            WHERE p.file.id = :fileId
+              AND p.responsibleUser.substitute.id = :substituteUserId
+              AND p.responsibleUser.substitute.active = true
+            """)
+    boolean existsByFileIdAndSubstituteUserId(
+            @Param("fileId") UUID fileId,
+            @Param("substituteUserId") UUID substituteUserId);
+
     boolean existsByFileIdAndStatus(UUID fileId, PassageStatus status);
 
     boolean existsByChainStepTemplateId(UUID chainStepTemplateId);
@@ -135,12 +145,18 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
             @Param("orgIds") Set<UUID> orgIds,
             @Param("organizationId") UUID organizationId);
 
-    /** Widget « Mon activité » (DSH-01) : maillons actifs dont l'utilisateur courant est responsable. */
+    /** Widget « Mon activité » (DSH-01) : maillons actifs dont l'utilisateur est responsable ou suppléant. */
     @Query("""
             SELECT p FROM FilePassage p
             JOIN FETCH p.file f
             JOIN FETCH p.chainStepTemplate
-            WHERE p.responsibleUser.id = :userId
+            WHERE (
+                    p.responsibleUser.id = :userId
+                    OR (
+                        p.responsibleUser.substitute.id = :userId
+                        AND p.responsibleUser.substitute.active = true
+                    )
+                  )
               AND p.status = com.nanotech.flux_pro_backend.enumeration.PassageStatus.IN_PROGRESS
               AND f.status = com.nanotech.flux_pro_backend.enumeration.FileStatus.IN_PROGRESS
             """)

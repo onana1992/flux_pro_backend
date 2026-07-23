@@ -92,6 +92,7 @@ public final class DtoMapper {
                 : user.getRoles().stream()
                         .map(r -> new RoleSummaryResponse(r.getId(), r.getName()))
                         .toList();
+        User substitute = user.getSubstitute();
         return new UserResponse(
                 user.getId(),
                 user.getStaffNumber(),
@@ -104,6 +105,10 @@ public final class DtoMapper {
                 user.getJobTitle(),
                 user.isActive(),
                 user.isOrganizationHead(),
+                substitute != null ? substitute.getId() : null,
+                substitute != null
+                        ? substitute.getLastName() + " " + substitute.getFirstName()
+                        : null,
                 user.isMustChangePassword(),
                 roles);
     }

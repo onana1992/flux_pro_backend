@@ -35,19 +35,26 @@ import java.time.temporal.ChronoUnit;
 @Slf4j
 public class ClockService {
 
+    /** Défaut historique — préférer {@link #zoneId()}. */
     public static final ZoneId BUSINESS_ZONE = ZoneId.of("Africa/Douala");
-
-    private static final DateTimeFormatter DISPLAY =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss").withZone(BUSINESS_ZONE);
 
     private final SystemClockRepository systemClockRepository;
     private final DelaiService delaiService;
+    private final TenantSettingsService tenantSettingsService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Value("${fluxpro.clock.mode:normal}")
     private String modeProperty;
 
     private ClockMode mode = ClockMode.NORMAL;
+
+    public ZoneId zoneId() {
+        return tenantSettingsService != null ? tenantSettingsService.zoneId() : BUSINESS_ZONE;
+    }
+
+    private DateTimeFormatter displayFormatter() {
+        return DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss").withZone(zoneId());
+    }
 
     @PostConstruct
     void init() {
@@ -96,14 +103,14 @@ public class ClockService {
         Instant current = now();
         if (mode != ClockMode.TEST) {
             return new SystemClockResponse(
-                    ClockMode.NORMAL, current, BUSINESS_ZONE.getId(), DISPLAY.format(current), false, null, null);
+                    ClockMode.NORMAL, current, zoneId().getId(), displayFormatter().format(current), false, null, null);
         }
         SystemClockState state = findStateOrNull();
         return new SystemClockResponse(
                 ClockMode.TEST,
                 current,
-                BUSINESS_ZONE.getId(),
-                DISPLAY.format(current),
+                zoneId().getId(),
+                displayFormatter().format(current),
                 true,
                 state != null ? state.getArtificialNow() : null,
                 state != null ? state.getWallSyncedAt() : null);
@@ -205,8 +212,8 @@ public class ClockService {
         };
     }
 
-    /** Affichage local Douala (hors API) — utile pour logs. */
+    /** Affichage local (fuseau tenant) — utile pour logs. */
     public ZonedDateTime nowZoned() {
-        return ZonedDateTime.ofInstant(now(), BUSINESS_ZONE);
+        return ZonedDateTime.ofInstant(now(), zoneId());
     }
 }

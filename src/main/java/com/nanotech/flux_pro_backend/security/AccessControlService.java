@@ -127,6 +127,9 @@ public class AccessControlService {
         if (filePassageRepository.existsByFileIdAndResponsibleUserId(file.getId(), actor.getId())) {
             return;
         }
+        if (filePassageRepository.existsByFileIdAndSubstituteUserId(file.getId(), actor.getId())) {
+            return;
+        }
         if (file.getOrganization() != null
                 && organizationScopeService.canAccess(actor, file.getOrganization().getId())) {
             return;

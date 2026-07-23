@@ -18,6 +18,7 @@ public record UserRequest(
         String jobTitle,
         boolean active,
         boolean organizationHead,
+        UUID substituteId,
         String temporaryPassword
 ) {
 }

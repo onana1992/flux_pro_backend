@@ -17,6 +17,8 @@ public record UserResponse(
         String jobTitle,
         boolean active,
         boolean organizationHead,
+        UUID substituteId,
+        String substituteDisplayName,
         boolean mustChangePassword,
         List<RoleSummaryResponse> roles) {
 }

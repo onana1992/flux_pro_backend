@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Seed des 4 types d'alerte du CDC (REMINDER/OVERDUE/ESCALATION/DAILY_DIGEST) marqués
- * systemDefined = true (protégés contre la suppression). Un admin métier peut en créer
- * d'autres librement via /api/admin/alert-types (ALR-F17).
+ * Seed des types d'alerte CDC + types événementiels passation.
+ * REMINDER/OVERDUE/ESCALATION/DAILY_DIGEST : règles programmées (ALR).
+ * PASSAGE_ARRIVAL/PASSAGE_CC : notifications à l'arrivée — exclus de la config des règles.
  */
 @Component
 @Order(22)
@@ -36,6 +36,12 @@ public class AlertTypeDataInitializer implements CommandLineRunner {
                     "alert-escalation");
             seedIfAbsent("DAILY_DIGEST", "Récapitulatif quotidien des retards",
                     "Digest quotidien des dossiers en retard (ALR-08)", "alert-daily-digest");
+            seedIfAbsent("PASSAGE_ARRIVAL", "Dossier arrivé sur votre maillon",
+                    "Notification au responsable lorsqu'un dossier arrive sur son maillon (CHN)",
+                    "passage-arrival");
+            seedIfAbsent("PASSAGE_CC", "Copie informée — dossier sur un maillon",
+                    "Notification aux utilisateurs en CC (copie informée) sans responsabilité de traitement (CHN-09)",
+                    "passage-cc");
             log.info("Alert type reference data initialized");
         } catch (Exception e) {
             log.warn("Alert type initialization skipped — execute docs/sql/2026-07-04_alert_types.sql: {}",

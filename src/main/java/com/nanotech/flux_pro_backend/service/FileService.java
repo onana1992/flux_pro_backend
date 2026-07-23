@@ -39,7 +39,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileService {
 
-    static final String REFERENCE_PREFIX = "MINTP";
     static final String VERY_URGENT_COURIER_TYPE = "COUR-STD";
     static final String VERY_URGENT_TEMPLATE_CODE = "T02";
 
@@ -50,9 +49,10 @@ public class FileService {
     private final ChainTemplateRepository chainTemplateRepository;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
-    private final OrganizationScopeService organizationScopeService;
     private final AccessControlService accessControlService;
+    private final OrganizationScopeService organizationScopeService;
     private final ClockService clockService;
+    private final TenantSettingsService tenantSettingsService;
 
     @Transactional(readOnly = true)
     public Page<FileSummaryResponse> findAll(
@@ -246,7 +246,8 @@ public class FileService {
         sequence.setLastSequence(next);
         fileNumberSequenceRepository.save(sequence);
 
-        return REFERENCE_PREFIX + "-" + organization.getCode() + "-" + year + "-" + String.format("%04d", next);
+        return tenantSettingsService.referencePrefix()
+                + "-" + organization.getCode() + "-" + year + "-" + String.format("%04d", next);
     }
 
     public ChainTemplate resolveTemplate(String fileTypeCode, FilePriority priority) {

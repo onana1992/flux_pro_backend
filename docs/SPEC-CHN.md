@@ -870,6 +870,7 @@ Réserves : _______________________________________________
 
 | Sujet | Module | Sprint |
 |-------|--------|--------|
+| **Moteur BPM générique** (BPMN, Camunda, Flowable…) | — | **Refusé** — remplacé par templates + étapes parallèles ([décision](./DECISION-TEMPLATES-PARALLELES-VS-BPM.md)) |
 | Alertes J-2, J+0, J+3, emails | ALR | S4 |
 | Worker CRON calcul retards | ALR | S4 |
 | Notifications in-app temps réel | ALR | S4 |

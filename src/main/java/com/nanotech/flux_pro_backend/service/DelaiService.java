@@ -2,7 +2,6 @@ package com.nanotech.flux_pro_backend.service;
 
 import com.nanotech.flux_pro_backend.enumeration.DelayUnit;
 import com.nanotech.flux_pro_backend.repository.BusinessCalendarDayRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -15,19 +14,33 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Service
-@RequiredArgsConstructor
 public class DelaiService {
 
+    /** Défaut historique (tests / fallback) — le fuseau effectif vient de {@link #zoneId()}. */
     public static final ZoneId BUSINESS_ZONE = ZoneId.of("Africa/Douala");
     private static final LocalTime WORK_START = LocalTime.of(8, 0);
     private static final LocalTime WORK_END = LocalTime.of(17, 0);
-    private static final String COUNTRY_CODE = "CM";
 
     private final BusinessCalendarDayRepository businessCalendarDayRepository;
+    private final TenantSettingsService tenantSettingsService;
+
+    public DelaiService(
+            BusinessCalendarDayRepository businessCalendarDayRepository,
+            TenantSettingsService tenantSettingsService) {
+        this.businessCalendarDayRepository = businessCalendarDayRepository;
+        this.tenantSettingsService = tenantSettingsService;
+    }
+
+    public ZoneId zoneId() {
+        return tenantSettingsService != null ? tenantSettingsService.zoneId() : BUSINESS_ZONE;
+    }
+
+    public String countryCode() {
+        return tenantSettingsService != null ? tenantSettingsService.countryCode() : "CM";
+    }
 
     /**
      * Calcule l'échéance. Un délai ≤ 0 (ex. étape de clôture) signifie « pas d'échéance » → {@code null}.
@@ -36,7 +49,7 @@ public class DelaiService {
         if (delayValue <= 0) {
             return null;
         }
-        ZonedDateTime zonedStart = ZonedDateTime.ofInstant(start, BUSINESS_ZONE);
+        ZonedDateTime zonedStart = ZonedDateTime.ofInstant(start, zoneId());
         if (unit == DelayUnit.WORKING_HOURS) {
             return addWorkingHours(zonedStart, delayValue).toInstant();
         }
@@ -56,7 +69,7 @@ public class DelaiService {
         if (offsetValue == 0) {
             return dueAt;
         }
-        ZonedDateTime zonedDueAt = ZonedDateTime.ofInstant(dueAt, BUSINESS_ZONE);
+        ZonedDateTime zonedDueAt = ZonedDateTime.ofInstant(dueAt, zoneId());
         if (offsetValue > 0) {
             return unit == DelayUnit.WORKING_HOURS
                     ? addWorkingHours(zonedDueAt, offsetValue).toInstant()
@@ -71,8 +84,8 @@ public class DelaiService {
         if (end.isBefore(start)) {
             return 0;
         }
-        ZonedDateTime from = ZonedDateTime.ofInstant(start, BUSINESS_ZONE).truncatedTo(ChronoUnit.DAYS);
-        ZonedDateTime to = ZonedDateTime.ofInstant(end, BUSINESS_ZONE).truncatedTo(ChronoUnit.DAYS);
+        ZonedDateTime from = ZonedDateTime.ofInstant(start, zoneId()).truncatedTo(ChronoUnit.DAYS);
+        ZonedDateTime to = ZonedDateTime.ofInstant(end, zoneId()).truncatedTo(ChronoUnit.DAYS);
         Set<LocalDate> holidays = loadHolidays(from.toLocalDate(), to.toLocalDate());
         int days = 0;
         for (LocalDate date = from.toLocalDate(); !date.isAfter(to.toLocalDate()); date = date.plusDays(1)) {
@@ -179,7 +192,7 @@ public class DelaiService {
     }
 
     private ZonedDateTime alignToWorkingTime(ZonedDateTime dateTime) {
-        ZonedDateTime cursor = dateTime.withZoneSameInstant(BUSINESS_ZONE);
+        ZonedDateTime cursor = dateTime.withZoneSameInstant(zoneId());
         Set<LocalDate> holidays = loadHolidays(cursor.toLocalDate(), cursor.toLocalDate().plusDays(7));
         while (!isWorkingDay(cursor.toLocalDate(), holidays)) {
             cursor = cursor.plusDays(1).with(WORK_START);
@@ -200,8 +213,8 @@ public class DelaiService {
     }
 
     private double calculateWorkingHoursBetween(Instant start, Instant end) {
-        ZonedDateTime cursor = alignToWorkingTime(ZonedDateTime.ofInstant(start, BUSINESS_ZONE));
-        ZonedDateTime endZoned = ZonedDateTime.ofInstant(end, BUSINESS_ZONE);
+        ZonedDateTime cursor = alignToWorkingTime(ZonedDateTime.ofInstant(start, zoneId()));
+        ZonedDateTime endZoned = ZonedDateTime.ofInstant(end, zoneId());
         if (!endZoned.isAfter(cursor)) {
             return 0;
         }
@@ -231,14 +244,18 @@ public class DelaiService {
     }
 
     private Set<LocalDate> loadHolidays(LocalDate from, LocalDate to) {
+        String country = countryCode();
         Set<LocalDate> holidays = new HashSet<>(
-                businessCalendarDayRepository.findHolidayDatesBetween(COUNTRY_CODE, from, to));
-        for (int year = from.getYear(); year <= to.getYear(); year++) {
-            holidays.add(LocalDate.of(year, 1, 1));
-            holidays.add(LocalDate.of(year, 2, 11));
-            holidays.add(LocalDate.of(year, 5, 1));
-            holidays.add(LocalDate.of(year, 5, 20));
-            holidays.add(LocalDate.of(year, 12, 25));
+                businessCalendarDayRepository.findHolidayDatesBetween(country, from, to));
+        // Filet CM : fériés fixes si absents de la table (rétrocompat seed historique)
+        if ("CM".equalsIgnoreCase(country)) {
+            for (int year = from.getYear(); year <= to.getYear(); year++) {
+                holidays.add(LocalDate.of(year, 1, 1));
+                holidays.add(LocalDate.of(year, 2, 11));
+                holidays.add(LocalDate.of(year, 5, 1));
+                holidays.add(LocalDate.of(year, 5, 20));
+                holidays.add(LocalDate.of(year, 12, 25));
+            }
         }
         return holidays;
     }

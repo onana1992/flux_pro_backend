@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -43,19 +42,19 @@ import java.util.UUID;
 @Slf4j
 public class AlertEngineService {
 
-    private static final DateTimeFormatter DUE_DATE_FORMAT =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy").withZone(ZoneId.of("Africa/Douala"));
-
     private final FilePassageRepository filePassageRepository;
     private final AlertRuleRepository alertRuleRepository;
     private final AlertRepository alertRepository;
     private final DelaiService delaiService;
     private final ClockService clockService;
     private final ResponsibleUserResolver responsibleUserResolver;
+    private final SubstituteService substituteService;
     private final NotificationService notificationService;
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AlertDigestRecipientRoleService digestRecipientRoleService;
+    private final TenantSettingsService tenantSettingsService;
     private final TransactionTemplate requiresNewTx;
 
     public AlertEngineService(
@@ -65,10 +64,13 @@ public class AlertEngineService {
             DelaiService delaiService,
             ClockService clockService,
             ResponsibleUserResolver responsibleUserResolver,
+            SubstituteService substituteService,
             NotificationService notificationService,
             OrganizationRepository organizationRepository,
             UserRepository userRepository,
             EmailService emailService,
+            AlertDigestRecipientRoleService digestRecipientRoleService,
+            TenantSettingsService tenantSettingsService,
             PlatformTransactionManager transactionManager) {
         this.filePassageRepository = filePassageRepository;
         this.alertRuleRepository = alertRuleRepository;
@@ -76,10 +78,13 @@ public class AlertEngineService {
         this.delaiService = delaiService;
         this.clockService = clockService;
         this.responsibleUserResolver = responsibleUserResolver;
+        this.substituteService = substituteService;
         this.notificationService = notificationService;
         this.organizationRepository = organizationRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.digestRecipientRoleService = digestRecipientRoleService;
+        this.tenantSettingsService = tenantSettingsService;
         this.requiresNewTx = new TransactionTemplate(transactionManager);
         this.requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -162,10 +167,13 @@ public class AlertEngineService {
     }
 
     private User resolveRecipient(AlertRule rule, FilePassage passage, FileEntity file) {
+        User recipient;
         if (rule.getTargetMode() == AlertTargetMode.CURRENT_RESPONSIBLE) {
-            return passage.getResponsibleUser();
+            recipient = passage.getResponsibleUser();
+        } else {
+            recipient = responsibleUserResolver.resolve(file, rule.getTargetRole());
         }
-        return responsibleUserResolver.resolve(file, rule.getTargetRole());
+        return substituteService.effectiveRecipient(recipient);
     }
 
     private void triggerAlert(FilePassage passage, FileEntity file, AlertRule rule, User recipient) {
@@ -188,12 +196,18 @@ public class AlertEngineService {
     }
 
     /**
-     * Digest quotidien des retards (ALR-08). Le rôle destinataire est une propriété
-     * (fluxpro.alerts.digest.target-role, DIRECTOR par défaut), pas un rôle codé en dur dans
-     * cette méthode : n'importe quelle valeur de UserRole peut être configurée sans recompiler.
+     * Digest quotidien des retards (ALR-08). Les rôles destinataires sont lus en base
+     * ({@link AlertDigestRecipientRoleService}), configurables via l'UI Paramètres —
+     * jamais un rôle unique figé dans le code.
      */
     @Transactional(readOnly = true)
-    public void runDailyDigest(UserRole digestRole) {
+    public void runDailyDigest() {
+        List<UserRole> digestRoles = digestRecipientRoleService.listRoles();
+        if (digestRoles.isEmpty()) {
+            log.info("ALR: digest ignoré — aucun rôle destinataire configuré");
+            return;
+        }
+        Set<UserRole> roleSet = Set.copyOf(digestRoles);
         Instant now = clockService.now();
         List<FilePassage> overduePassages = filePassageRepository.findOverdueForDigest(now);
         if (overduePassages.isEmpty()) {
@@ -201,7 +215,7 @@ public class AlertEngineService {
         }
         List<User> recipients = userRepository.findAll().stream()
                 .filter(User::isActive)
-                .filter(u -> u.getRole() == digestRole)
+                .filter(u -> roleSet.contains(u.getRole()))
                 .toList();
         for (User recipient : recipients) {
             Set<UUID> scope = collectOrganizationSubtree(recipient.getOrganization().getId());
@@ -215,7 +229,8 @@ public class AlertEngineService {
             try {
                 emailService.sendDigest(
                         recipient.getEmail(),
-                        "[ChaîneFlux] Récapitulatif quotidien des retards (" + scoped.size() + ")",
+                        "[" + tenantSettingsService.productName()
+                                + "] Récapitulatif quotidien des retards (" + scoped.size() + ")",
                         buildDigestBody(scoped, now));
             } catch (Exception e) {
                 log.warn("ALR: digest échoué pour {} : {}", recipient.getEmail(), e.getMessage());
@@ -239,6 +254,8 @@ public class AlertEngineService {
     }
 
     private String buildDigestBody(List<FilePassage> scoped, Instant now) {
+        DateTimeFormatter dueDateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                .withZone(tenantSettingsService.zoneId());
         StringBuilder sb = new StringBuilder("Dossiers en retard :\n\n");
         for (FilePassage passage : scoped) {
             FileEntity file = passage.getFile();
@@ -246,10 +263,12 @@ public class AlertEngineService {
             sb.append("- ").append(file.getReferenceNumber())
                     .append(" — ").append(file.getSubject())
                     .append(" — étape : ").append(passage.getChainStepTemplate().getLabel())
-                    .append(" — échéance : ").append(DUE_DATE_FORMAT.format(passage.getDueAt()))
+                    .append(" — échéance : ").append(dueDateFormat.format(passage.getDueAt()))
                     .append(" — retard : ").append(workingDaysLate).append(" j. ouvré(s)\n");
         }
-        sb.append("\nConnectez-vous à ChaîneFlux pour plus de détails.");
+        sb.append("\nConnectez-vous à ")
+                .append(tenantSettingsService.productName())
+                .append(" pour plus de détails.");
         return sb.toString();
     }
 }

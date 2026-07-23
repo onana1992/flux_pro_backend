@@ -24,14 +24,19 @@ class DelaiServiceTest {
 
     @Mock
     private BusinessCalendarDayRepository businessCalendarDayRepository;
+    @Mock
+    private TenantSettingsService tenantSettingsService;
 
     private DelaiService delaiService;
 
     @BeforeEach
     void setUp() {
-        delaiService = new DelaiService(businessCalendarDayRepository);
+        delaiService = new DelaiService(businessCalendarDayRepository, tenantSettingsService);
         org.mockito.Mockito.lenient().when(businessCalendarDayRepository.findHolidayDatesBetween(eq("CM"), any(), any()))
                 .thenReturn(List.of());
+        org.mockito.Mockito.lenient().when(tenantSettingsService.zoneId())
+                .thenReturn(DelaiService.BUSINESS_ZONE);
+        org.mockito.Mockito.lenient().when(tenantSettingsService.countryCode()).thenReturn("CM");
     }
 
     @Test

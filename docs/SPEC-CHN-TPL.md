@@ -787,6 +787,7 @@ Product Owner : ____________________  Date : _______
 
 | Sujet | Module / Sprint |
 |-------|-----------------|
+| **Moteur BPM générique** | **Refusé** — templates + étapes parallèles ([décision](./DECISION-TEMPLATES-PARALLELES-VS-BPM.md)) |
 | Exécution passation (transmit/return) | CHN-PASS |
 | Calcul échéances runtime | DEL |
 | Alertes et escalades | Sprint 4 |

@@ -6,6 +6,7 @@ import com.nanotech.flux_pro_backend.enumeration.UserRole;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record PassageResponse(
@@ -36,6 +37,7 @@ public record PassageResponse(
         String internalComment,
         String returnReason,
         Instant suspendedAt,
-        Instant resumedAt
+        Instant resumedAt,
+        List<PassageCcUserResponse> ccUsers
 ) {
 }

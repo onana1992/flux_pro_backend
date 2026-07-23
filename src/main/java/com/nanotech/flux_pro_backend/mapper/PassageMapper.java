@@ -2,6 +2,7 @@ package com.nanotech.flux_pro_backend.mapper;
 
 import com.nanotech.flux_pro_backend.dto.response.CurrentHolderResponse;
 import com.nanotech.flux_pro_backend.dto.response.FilePassageCircuitResponse;
+import com.nanotech.flux_pro_backend.dto.response.PassageCcUserResponse;
 import com.nanotech.flux_pro_backend.dto.response.PassageResponse;
 import com.nanotech.flux_pro_backend.entity.ChainStepTemplate;
 import com.nanotech.flux_pro_backend.entity.FileEntity;
@@ -89,7 +90,18 @@ public final class PassageMapper {
                 passage.getInternalComment(),
                 passage.getReturnReason(),
                 passage.getSuspendedAt(),
-                passage.getResumedAt());
+                passage.getResumedAt(),
+                toCcUsers(passage));
+    }
+
+    private static List<PassageCcUserResponse> toCcUsers(FilePassage passage) {
+        if (passage.getCcUsers() == null || passage.getCcUsers().isEmpty()) {
+            return List.of();
+        }
+        return passage.getCcUsers().stream()
+                .map(u -> new PassageCcUserResponse(
+                        u.getId(), u.getFirstName(), u.getLastName(), u.getEmail()))
+                .toList();
     }
 
     public static CurrentHolderResponse toCurrentHolder(

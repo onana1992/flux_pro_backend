@@ -57,6 +57,7 @@ public class UserService {
     private final AccessControlService accessControlService;
     private final RoleService roleService;
     private final RbacAuthorityService rbacAuthorityService;
+    private final SubstituteService substituteService;
     private final PasswordEncoder passwordEncoder;
     private final MessageTranslator messageTranslator;
 
@@ -272,6 +273,26 @@ public class UserService {
         user.setJobTitle(request.jobTitle());
         user.setActive(request.active());
         applyOrganizationHead(user, org, request.organizationHead());
+        applySubstitute(user, request.substituteId());
+    }
+
+    private void applySubstitute(User user, UUID substituteId) {
+        if (substituteId == null) {
+            user.setSubstitute(null);
+            return;
+        }
+        if (user.getId() != null && substituteId.equals(user.getId())) {
+            throw AppException.badRequest("USER_SUBSTITUTE_SELF", "A user cannot be their own substitute");
+        }
+        User substitute = userRepository.findById(substituteId)
+                .orElseThrow(() -> AppException.notFound("USER_NOT_FOUND", "User not found"));
+        if (!substitute.isActive()) {
+            throw AppException.badRequest("USER_SUBSTITUTE_INACTIVE", "Substitute user is inactive");
+        }
+        if (substituteService.wouldCreateCycle(user.getId(), substituteId)) {
+            throw AppException.badRequest("USER_SUBSTITUTE_CYCLE", "Substitute assignment would create a cycle");
+        }
+        user.setSubstitute(substitute);
     }
 
     private void applyOrganizationHead(User user, Organization org, boolean organizationHead) {
