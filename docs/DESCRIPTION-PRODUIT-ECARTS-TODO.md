@@ -242,7 +242,7 @@ Priorisation indicative : **P0** = pilote / crédibilité · **P1** = post-pilot
 ### 5.7 Qualité & dette — P0 / P1
 
 - [ ] **P0** — Mettre à jour les en-têtes SPEC (`non implémenté`) obsolètes vs code réel
-- [ ] **P1** — Nettoyer jobs dépréciés (`AlertSchedulerJob` / `AlertDigestJob` shells) si encore présents
+- [x] **P1** — Nettoyer jobs dépréciés (`AlertSchedulerJob` / `AlertDigestJob` shells) si encore présents — **fait** : shells vides supprimés ; scheduling via `ClockDrivenJobScheduler`
 - [ ] **P1** — Tests de non-régression passation parallèle + alertes avec horloge système
 - [x] **P2** — « Remember me » login : **déjà fait** — `localStorage` vs `sessionStorage` + email prérempli
 
