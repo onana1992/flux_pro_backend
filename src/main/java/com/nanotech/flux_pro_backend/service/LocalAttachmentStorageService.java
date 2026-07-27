@@ -17,7 +17,7 @@ import java.util.UUID;
 @Service
 public class LocalAttachmentStorageService {
 
-    static final String BUCKET = "local";
+    public static final String BUCKET = "local";
 
     private final Path rootPath;
 

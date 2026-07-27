@@ -33,6 +33,10 @@ public class ChainStepTemplate extends BaseEntity {
     @Column(name = "responsible_role", nullable = false, length = 30)
     private UserRole responsibleRole;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private Organization organization;
+
     @Column(name = "delay_value", nullable = false)
     private int delayValue;
 

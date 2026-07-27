@@ -129,6 +129,100 @@ public class PassageService {
         return getCircuit(fileId, actor);
     }
 
+    /**
+     * Init chaîne à la soumission portail :
+     * utilise les responsables préconfigurés (tous les maillons renseignés),
+     * 1er stage obligatoire (comme l'init circuit d'un dossier métier).
+     */
+    @Transactional
+    public void initializeChainForPortalSubmission(
+            FileEntity file, ChainTemplate template, Map<UUID, UUID> preconfiguredAssignments) {
+        if (file.getStatus() != FileStatus.IN_PROGRESS && file.getStatus() != FileStatus.ON_HOLD) {
+            throw FileException.conflict(
+                    "FILE_CHAIN_INIT_STATUS_INVALID", "Chain can only be initialized on active files");
+        }
+        if (filePassageRepository.existsByFileId(file.getId())) {
+            throw FileException.conflict("PASSAGE_CHAIN_EXISTS", "Chain already initialized for this file");
+        }
+        if (template == null || !template.isActive()) {
+            throw FileException.badRequest("PASSAGE_CHAIN_INACTIVE", "Chain template is inactive");
+        }
+
+        ChainTemplate loaded = chainTemplateRepository.findByIdWithSteps(template.getId())
+                .orElseThrow(() -> FileException.badRequest("PASSAGE_CHAIN_MISSING", "Chain template not found"));
+        List<ChainStepTemplate> steps = loaded.getSteps().stream()
+                .sorted(Comparator.comparingInt(ChainStepTemplate::getStepOrder)
+                        .thenComparing(ChainStepTemplate::getLabel, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        if (steps.isEmpty()) {
+            throw FileException.badRequest("PASSAGE_CHAIN_EMPTY", "Chain template has no steps");
+        }
+
+        Integer firstStage = PassageStageHelper.distinctStagesFromSteps(steps).stream()
+                .findFirst()
+                .orElseThrow();
+        Map<UUID, UUID> configured = preconfiguredAssignments != null ? preconfiguredAssignments : Map.of();
+        Set<UUID> ministryOrgIds = new LinkedHashSet<>(collectMinistryOrganizationIds(file.getOrganization()));
+        Map<UUID, UUID> assignments = new HashMap<>();
+        for (ChainStepTemplate step : steps) {
+            UUID configuredUserId = configured.get(step.getId());
+            if (configuredUserId != null) {
+                assignments.put(step.getId(), configuredUserId);
+            } else if (step.getStepOrder() == firstStage) {
+                User responsible = resolvePortalFirstStepResponsible(step, ministryOrgIds);
+                assignments.put(step.getId(), responsible.getId());
+            }
+        }
+        for (ChainStepTemplate step : steps) {
+            if (step.getStepOrder() == firstStage && !assignments.containsKey(step.getId())) {
+                throw FileException.badRequest(
+                        "PASSAGE_FIRST_ASSIGNMENT_REQUIRED",
+                        "A responsible user must be chosen for the first stage: " + step.getLabel(),
+                        step.getLabel());
+            }
+        }
+
+        Map<UUID, User> usersById = loadResponsibleUsers(assignments.values());
+        file.setChainTemplate(loaded);
+        fileRepository.save(file);
+        initializeChain(file, steps, assignments, usersById, Map.of(), ministryOrgIds);
+    }
+
+    @Transactional
+    public void initializeChainForPortalSubmission(FileEntity file, ChainTemplate template) {
+        initializeChainForPortalSubmission(file, template, Map.of());
+    }
+
+    private User resolvePortalFirstStepResponsible(ChainStepTemplate step, Set<UUID> ministryOrgIds) {
+        UserRole role = step.getResponsibleRole();
+        if (step.getOrganization() != null) {
+            List<User> inOrgRole = userRepository.findActiveByRoleInOrganizations(
+                    role, List.of(step.getOrganization().getId()));
+            if (!inOrgRole.isEmpty()) {
+                return inOrgRole.get(0);
+            }
+            List<User> inOrg = userRepository.findActiveByOrganizationId(step.getOrganization().getId());
+            if (!inOrg.isEmpty()) {
+                return inOrg.get(0);
+            }
+        }
+        List<User> byRole = userRepository.findActiveByRole(role);
+        List<User> scoped = ministryOrgIds.isEmpty()
+                ? byRole
+                : byRole.stream()
+                        .filter(u -> u.getOrganization() != null
+                                && ministryOrgIds.contains(u.getOrganization().getId()))
+                        .toList();
+        List<User> selected = scoped.isEmpty() ? byRole : scoped;
+        if (selected.isEmpty()) {
+            throw FileException.badRequest(
+                    "PORTAL_RESPONSIBLE_UNRESOLVED",
+                    "No active user found for first-step role: " + role,
+                    role.name());
+        }
+        return selected.get(0);
+    }
+
     @Transactional(readOnly = true)
     public List<PassageCandidateResponse> listCandidates(UUID fileId, UserRole role, SecurityUser actor) {
         FileEntity file = loadFile(fileId, actor);

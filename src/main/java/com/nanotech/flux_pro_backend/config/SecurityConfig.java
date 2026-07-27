@@ -1,9 +1,9 @@
 package com.nanotech.flux_pro_backend.config;
 
-import com.nanotech.flux_pro_backend.security.AccountInactiveException;
 import com.nanotech.flux_pro_backend.security.CustomAuthenticationEntryPoint;
 import com.nanotech.flux_pro_backend.security.JwtAuthenticationFilter;
 import com.nanotech.flux_pro_backend.security.MustChangePasswordFilter;
+import com.nanotech.flux_pro_backend.security.PortalJwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,10 +31,16 @@ public class SecurityConfig {
             "/v3/api-docs.yaml",
             "/api/auth/login",
             "/api/auth/refresh",
-            "/api/public/**"
+            "/api/public/**",
+            "/api/portal/auth/login",
+            "/api/portal/auth/activate",
+            "/api/portal/auth/register",
+            "/api/portal/auth/otp/request",
+            "/api/portal/auth/otp/verify"
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final PortalJwtAuthenticationFilter portalJwtAuthenticationFilter;
     private final MustChangePasswordFilter mustChangePasswordFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
@@ -53,8 +59,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers("/api/portal/**").hasAuthority("ROLE_PORTAL")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(portalJwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(mustChangePasswordFilter, JwtAuthenticationFilter.class)
                 .build();
     }

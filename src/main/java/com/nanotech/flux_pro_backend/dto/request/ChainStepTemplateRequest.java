@@ -12,6 +12,7 @@ public record ChainStepTemplateRequest(
         @NotNull @Min(1) Integer stepOrder,
         @NotBlank @Size(max = 255) String label,
         @NotNull UserRole responsibleRole,
+        @NotNull java.util.UUID organizationId,
         @NotNull @Min(0) Integer delayValue,
         @NotNull DelayUnit delayUnit,
         @Size(max = 500) String expectedAction,

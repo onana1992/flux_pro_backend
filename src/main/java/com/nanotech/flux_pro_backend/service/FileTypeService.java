@@ -5,6 +5,7 @@ import com.nanotech.flux_pro_backend.dto.request.FileTypeRequest;
 import com.nanotech.flux_pro_backend.entity.FileType;
 import com.nanotech.flux_pro_backend.repository.ChainTemplateRepository;
 import com.nanotech.flux_pro_backend.repository.FileTypeRepository;
+import com.nanotech.flux_pro_backend.repository.PreconfiguredDossierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class FileTypeService {
 
     private final FileTypeRepository fileTypeRepository;
     private final ChainTemplateRepository chainTemplateRepository;
+    private final PreconfiguredDossierRepository preconfiguredDossierRepository;
 
     @Transactional(readOnly = true)
     public List<FileType> listActive() {
@@ -76,6 +78,11 @@ public class FileTypeService {
         if (chainTemplateRepository.existsByFileTypeCodeIgnoreCase(type.getCode())) {
             throw AppException.conflict(
                     "FILE_TYPE_LINKED_TO_CHAIN", "Cannot delete file type linked to a chain template");
+        }
+        if (preconfiguredDossierRepository.existsByFileTypeCodeIgnoreCase(type.getCode())) {
+            throw AppException.conflict(
+                    "FILE_TYPE_LINKED_TO_PRECONFIGURED",
+                    "Cannot delete file type linked to a preconfigured dossier");
         }
         fileTypeRepository.delete(type);
     }

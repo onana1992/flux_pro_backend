@@ -20,14 +20,16 @@ public interface ChainTemplateRepository extends JpaRepository<ChainTemplate, UU
 
     @Query("""
             SELECT DISTINCT t FROM ChainTemplate t
-            LEFT JOIN FETCH t.steps
+            LEFT JOIN FETCH t.steps s
+            LEFT JOIN FETCH s.organization
             WHERE t.id = :id
             """)
     Optional<ChainTemplate> findByIdWithSteps(@Param("id") UUID id);
 
     @Query("""
             SELECT DISTINCT t FROM ChainTemplate t
-            LEFT JOIN FETCH t.steps
+            LEFT JOIN FETCH t.steps s
+            LEFT JOIN FETCH s.organization
             WHERE UPPER(t.code) = UPPER(:code)
             """)
     Optional<ChainTemplate> findByCodeWithSteps(@Param("code") String code);

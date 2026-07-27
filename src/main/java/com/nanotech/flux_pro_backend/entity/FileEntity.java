@@ -35,6 +35,10 @@ public class FileEntity extends BaseEntity {
     private String fileTypeCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "preconfigured_dossier_id")
+    private PreconfiguredDossier preconfiguredDossier;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chain_template_id")
     private ChainTemplate chainTemplate;
 
@@ -43,8 +47,12 @@ public class FileEntity extends BaseEntity {
     private Organization organization;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id", nullable = false)
+    @JoinColumn(name = "created_by_user_id")
     private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "portal_user_id")
+    private PortalUser portalUser;
 
     @Column(nullable = false, length = 500)
     private String subject;

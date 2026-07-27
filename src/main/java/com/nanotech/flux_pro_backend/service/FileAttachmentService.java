@@ -125,7 +125,7 @@ public class FileAttachmentService {
         return getAttachment(file, attachmentId).getContentType();
     }
 
-    void validateFile(MultipartFile multipart) {
+    public void validateFile(MultipartFile multipart) {
         if (multipart == null || multipart.isEmpty()) {
             throw FileException.badRequest("FILE_ATTACHMENT_REQUIRED", "Attachment file is required");
         }

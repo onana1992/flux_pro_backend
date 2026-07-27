@@ -21,7 +21,7 @@ import java.util.List;
 @Setter
 public class ChainTemplate extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 10)
+    @Column(nullable = false, unique = true, length = 32)
     private String code;
 
     @Column(nullable = false)

@@ -81,6 +81,14 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         seedOrganizationIfMissing("DSI", "Direction des Systèmes d'Information", directorateType, mintp);
+        seedOrganizationIfMissing("MINTP-CABINET", "Cabinet du Ministre", directorateType, mintp);
+        seedOrganizationIfMissing("MINTP-SG", "Secrétariat Général", directorateType, mintp);
+        seedOrganizationIfMissing("DAG", "Direction des Affaires Générales", directorateType, mintp);
+        seedOrganizationIfMissing("DIER",
+                "Direction des Investissements et de l'Entretien Routier (alias pilote CDC)",
+                directorateType, mintp);
+        seedOrganizationIfMissing("DGTI", "Direction Générale des Travaux d'Infrastructures", directorateType, mintp);
+        seedOrganizationIfMissing("DGET", "Direction Générale des Études Techniques", directorateType, mintp);
 
         Organization dsi = organizationRepository.findByCode("DSI").orElseThrow();
         if (userRepository.findByEmail("e.fotso@mintp.cm").isEmpty()) {

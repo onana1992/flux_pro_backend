@@ -22,4 +22,12 @@ public class SecurityUtils {
         }
         return null;
     }
+
+    public PortalSecurityUser currentPortalUser() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof PortalSecurityUser user)) {
+            throw AppException.unauthorized("AUTH_NOT_AUTHENTICATED", "Portal user not authenticated");
+        }
+        return user;
+    }
 }

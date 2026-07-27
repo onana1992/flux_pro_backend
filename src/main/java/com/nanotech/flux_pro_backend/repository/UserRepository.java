@@ -52,6 +52,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByIdWithOrganization(@Param("id") UUID id);
 
     @Query("""
+            SELECT DISTINCT u FROM User u
+            JOIN FETCH u.organization
+            WHERE u.id IN :ids
+            """)
+    List<User> findAllByIdWithOrganization(@Param("ids") Collection<UUID> ids);
+
+    @Query("""
             SELECT u FROM User u
             LEFT JOIN FETCH u.substitute
             WHERE u.id = :id

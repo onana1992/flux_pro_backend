@@ -7,10 +7,13 @@ import com.nanotech.flux_pro_backend.dto.request.ChainTemplateUpdateRequest;
 import com.nanotech.flux_pro_backend.dto.response.ChainTemplateSummaryResponse;
 import com.nanotech.flux_pro_backend.entity.ChainStepTemplate;
 import com.nanotech.flux_pro_backend.entity.ChainTemplate;
+import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.enumeration.DelayUnit;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.mapper.ChainTemplateMapper;
 import com.nanotech.flux_pro_backend.repository.ChainTemplateRepository;
+import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
+import com.nanotech.flux_pro_backend.repository.PreconfiguredDossierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +38,8 @@ public class ChainTemplateService {
 
     private final ChainTemplateRepository chainTemplateRepository;
     private final ChainTemplateUsageService chainTemplateUsageService;
+    private final PreconfiguredDossierRepository preconfiguredDossierRepository;
+    private final OrganizationRepository organizationRepository;
 
     @Transactional(readOnly = true)
     public Page<ChainTemplateSummaryResponse> findAllSummaries(
@@ -125,6 +130,11 @@ public class ChainTemplateService {
                     "CHAIN_TEMPLATE_IN_USE",
                     "Cannot delete a chain template already linked to files");
         }
+        if (preconfiguredDossierRepository.existsByChainTemplateId(id)) {
+            throw ChainTemplateException.conflict(
+                    "CHAIN_TEMPLATE_LINKED_TO_PRECONFIGURED",
+                    "Cannot delete a chain template linked to a preconfigured dossier");
+        }
         chainTemplateRepository.delete(template);
     }
 
@@ -152,6 +162,7 @@ public class ChainTemplateService {
                         s.getStepOrder(),
                         s.getLabel(),
                         s.getResponsibleRole(),
+                        s.getOrganization() != null ? s.getOrganization().getId() : null,
                         s.getDelayValue(),
                         s.getDelayUnit(),
                         s.getExpectedAction(),
@@ -183,10 +194,6 @@ public class ChainTemplateService {
                 .filter(ChainStepTemplateRequest::closureStep)
                 .findFirst()
                 .orElseThrow();
-        if (closure.delayValue() != 0) {
-            throw ChainTemplateException.badRequest(
-                    "CHAIN_CLOSURE_DELAY_INVALID", "Closure step must have zero delay");
-        }
         int lastStage = stages.get(stages.size() - 1);
         long closureStageCount = steps.stream()
                 .filter(s -> s.stepOrder() == lastStage)
@@ -216,6 +223,20 @@ public class ChainTemplateService {
                     "CHAIN_DELAY_SUM_EXCEEDED",
                     "Sum of step delays exceeds total delay days (" + template.getTotalDelayDays() + ")",
                     template.getTotalDelayDays());
+        }
+        for (ChainStepTemplateRequest step : steps) {
+            if (step.organizationId() == null) {
+                throw ChainTemplateException.badRequest(
+                        "CHAIN_STEP_ORG_REQUIRED",
+                        "Organization is required for step: " + step.label(),
+                        step.label());
+            }
+            if (!organizationRepository.existsById(step.organizationId())) {
+                throw ChainTemplateException.badRequest(
+                        "CHAIN_STEP_ORG_NOT_FOUND",
+                        "Organization not found for step: " + step.label(),
+                        step.label());
+            }
         }
     }
 
@@ -310,6 +331,12 @@ public class ChainTemplateService {
         step.setStepOrder(req.stepOrder());
         step.setLabel(req.label().trim());
         step.setResponsibleRole(req.responsibleRole());
+        Organization organization = organizationRepository.findById(req.organizationId())
+                .orElseThrow(() -> ChainTemplateException.badRequest(
+                        "CHAIN_STEP_ORG_NOT_FOUND",
+                        "Organization not found for step: " + req.label(),
+                        req.label()));
+        step.setOrganization(organization);
         step.setDelayValue(req.delayValue());
         step.setDelayUnit(req.delayUnit());
         step.setExpectedAction(req.expectedAction());
@@ -324,6 +351,7 @@ public class ChainTemplateService {
                         s.getStepOrder(),
                         s.getLabel(),
                         s.getResponsibleRole(),
+                        s.getOrganization() != null ? s.getOrganization().getId() : null,
                         s.getDelayValue(),
                         s.getDelayUnit(),
                         s.getExpectedAction(),

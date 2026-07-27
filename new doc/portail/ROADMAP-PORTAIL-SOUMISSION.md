@@ -109,17 +109,17 @@ P5 Admin  P4 Front demandeur (interne / externe)
 
 **Livrables**
 
-- [ ] Table `portal_users` (+ script dans `docs/sql/`) incluant `mustChangePassword`, `passwordChangedAt`, `createdByAdminUserId`
-- [ ] Colonnes `FileType` : `portalEnabled`, `portalAudience`, `chainTemplateId`, `defaultFirstStepResponsibleUserId`, `formSchema`, `requiredAttachmentKeys`
-- [ ] `FileEntity.createdBy` nullable ou créateur technique + `portalUserId`
-- [ ] `FileAttachment.uploader` adapté (portail / technique)
-- [ ] Security filter distinct JWT métier vs token portail
+- [x] Table `portal_users` (+ script dans `docs/sql/`) incluant `mustChangePassword`, `passwordChangedAt`, `createdByAdminUserId`
+- [x] Colonnes `FileType` : `portalEnabled`, `portalAudience`, `formSchema`, `requiredAttachmentKeys` (chaîne via `fileTypeCode`, responsable via rôle 1er maillon)
+- [x] `FileEntity.createdBy` nullable ou créateur technique + `portalUserId`
+- [x] `FileAttachment.uploader` adapté (portail / technique)
+- [x] Security filter distinct JWT métier vs token portail
 
 **Exit criteria**
 
-- Scripts SQL appliqués en local
+- [x] Scripts SQL appliqués en local (`docs/sql/2026-07-24_portal_foundations.sql`)
 - Endpoints métier inchangés / smoke tests OK
-- Appel `/api/portal/**` refusé sans token portail
+- Appel `/api/portal/**` (ex. `GET /api/portal/me`) refusé sans token portail (401) ; token métier ignoré sur ce realm
 
 ---
 
@@ -129,18 +129,18 @@ P5 Admin  P4 Front demandeur (interne / externe)
 
 **Livrables**
 
-- [ ] `FormSchemaValidator` (types v1)
-- [ ] `PortalSubmissionService` avec contrôle `portalUserType` ↔ `portalAudience`
-- [ ] `GET /api/portal/form-types` (filtré audience) et `/schema`
-- [ ] `POST /api/portal/submissions` (+ attachments)
-- [ ] `GET /api/portal/submissions` et `/{ref}`
-- [ ] Admin `PUT /api/admin/file-types/{code}/portal` (incl. audience) et `/form-schema`
+- [x] `FormSchemaValidator` (types v1)
+- [x] `PortalSubmissionService` avec contrôle `portalUserType` ↔ `portalAudience`
+- [x] `GET /api/portal/form-types` (filtré audience) et `/schema`
+- [x] `POST /api/portal/submissions` (+ attachments)
+- [x] `GET /api/portal/submissions` et `/{ref}`
+- [x] Admin `PUT /api/admin/file-types/{code}/portal` (incl. audience) et `/form-schema`
 
 **Exit criteria**
 
-- Soumission E2E : `DRAFT` → `IN_PROGRESS` + référence + stage 1 actif
-- Rejet si audience incompatible ou `formData` / PJ invalides
-- PORTAL-05 : aucun endpoint passage exposé au portail
+- [x] Soumission E2E code path : `DRAFT` → `IN_PROGRESS` + référence + init chaîne stage 1 (`PassageService.initializeChainForPortalSubmission`)
+- [x] Rejet si audience incompatible ou `formData` / PJ invalides
+- [x] PORTAL-05 : aucun endpoint passage sous `/api/portal/**`
 
 ---
 
@@ -151,21 +151,22 @@ P5 Admin  P4 Front demandeur (interne / externe)
 
 **Livrables**
 
-- [ ] `POST /api/portal/auth/login` (email + mdp — interne)
-- [ ] `POST /api/portal/auth/activate` — mdp provisoire → nouveau mdp ; `mustChangePassword = false`
-- [ ] Challenge `PASSWORD_CHANGE_REQUIRED` si 1ʳᵉ connexion / reset (PORTAL-14, PORTAL-15)
-- [ ] `POST /api/portal/auth/register` (externe) + `otp/request` + `otp/verify`
-- [ ] OTP à chaque login externe ; `emailVerifiedAt` à la 1ʳᵉ vérif ; pas de soumission si non vérifié
-- [ ] JWT portail : `portalUserId`, `portalUserType`, `mustChangePassword`
-- [ ] Rate limiting login / OTP / activate
-- [ ] Isolation : un `PortalUser` ne voit que ses soumissions
+- [x] `POST /api/portal/auth/login` (email + mdp — interne)
+- [x] `POST /api/portal/auth/activate` — mdp provisoire → nouveau mdp ; `mustChangePassword = false`
+- [x] Challenge `PASSWORD_CHANGE_REQUIRED` si 1ʳᵉ connexion / reset (PORTAL-14, PORTAL-15)
+- [x] `POST /api/portal/auth/register` (externe) + `otp/request` + `otp/verify`
+- [x] OTP à chaque login externe ; `emailVerifiedAt` à la 1ʳᵉ vérif ; pas de soumission si non vérifié
+- [x] JWT portail : `portalUserId`, `portalUserType`, `mustChangePassword`
+- [x] Rate limiting login / OTP / activate
+- [x] Isolation : un `PortalUser` ne voit que ses soumissions
+- [x] Admin : `POST/GET /api/admin/portal-users` + reset-password (one-shot ± email)
 
 **Exit criteria**
 
-- Compte interne créé avec provisoire : login → force activation → puis accès espace
-- Tant que `mustChangePassword` : refus catalogue / soumission / suivi
-- Login portail ne donne aucun accès `/api/admin` ni passages
-- Reset admin réarme correctement `mustChangePassword`
+- [x] Compte interne créé avec provisoire : login → `PASSWORD_CHANGE_REQUIRED` → activate → accès espace
+- [x] Tant que `mustChangePassword` : refus catalogue / soumission / suivi (P2 `assertCanUsePortal`)
+- [x] Login portail ne donne aucun accès `/api/admin` ni passages (`type=portal_access`)
+- [x] Reset admin réarme `mustChangePassword`
 
 **Risques**
 
@@ -180,17 +181,17 @@ P5 Admin  P4 Front demandeur (interne / externe)
 
 **Livrables**
 
-- [ ] Routes `/portal/internal` et `/portal/external` (ou équivalent) hors shell métier
-- [ ] Écran login interne + **écran activation** (changement mdp obligatoire)
-- [ ] Login / OTP externe
-- [ ] Espace : catalogue (filtré), formulaire dynamique, upload PJ, confirmation + référence
-- [ ] Mes demandes + détail suivi lecture seule
-- [ ] Auth store portail séparé de `RequireAuth` métier
+- [x] Routes `/portal/internal` et `/portal/external` hors shell métier
+- [x] Écran login interne + **écran activation** (changement mdp obligatoire)
+- [x] Login / OTP externe (+ inscription)
+- [x] Espace : catalogue, formulaire dynamique, upload PJ, confirmation + référence
+- [x] Mes demandes + détail suivi lecture seule
+- [x] Auth store portail séparé (`portal-auth-storage` / `portal-api` / `PortalAuthProvider`)
 
 **Exit criteria**
 
-- Parcours complet employé : 1ʳᵉ connexion → activation → soumission → suivi
-- Aucun appel API métier depuis le portail
+- [x] Parcours UI employé : login → activation → catalogue → soumission → suivi
+- [x] Aucun appel API métier depuis le module portail (`/api/portal/**` uniquement)
 
 ---
 
@@ -200,12 +201,12 @@ P5 Admin  P4 Front demandeur (interne / externe)
 
 **Livrables**
 
-- [ ] Écran config `FileType` : `portalEnabled`, `portalAudience`, chaîne, responsable défaut
-- [ ] Éditeur schéma formulaire v1 (pas drag & drop)
-- [ ] **CRUD comptes portail internes** : créer (mdp provisoire **one-shot** UI + option « envoyer par email »), modifier, activer/désactiver
-- [ ] **Reset mot de passe** (nouveau provisoire one-shot ± email + `mustChangePassword = true`)
-- [ ] Retrait portail (`portalEnabled = false`) sans supprimer dossiers (PORTAL-10)
-- [ ] APIs : `POST/PATCH/GET /api/admin/portal-users`, `POST .../reset-password`
+- [x] Écran config `FileType` : `portalEnabled`, `portalAudience`, chaîne, responsable défaut
+- [x] Éditeur schéma formulaire v1 (pas drag & drop)
+- [x] **CRUD comptes portail internes** : créer (mdp provisoire **one-shot** UI + option « envoyer par email »), modifier, activer/désactiver
+- [x] **Reset mot de passe** (nouveau provisoire one-shot ± email + `mustChangePassword = true`)
+- [x] Retrait portail (`portalEnabled = false`) sans supprimer dossiers (PORTAL-10)
+- [x] APIs : `POST/PATCH/GET /api/admin/portal-users`, `POST .../reset-password`
 
 **Exit criteria**
 
@@ -269,15 +270,15 @@ P5 Admin  P4 Front demandeur (interne / externe)
 
 | Écart | État actuel | Phase |
 |---|---|---|
-| `PortalUser` + auth | Absent | P1 + P3 |
-| Variantes interne / externe | Absent | P1 + P2 + P4 |
-| Création admin + activation mdp | Absent | P3 + P5 |
-| Formulaire par type | `metadata` libre | P1 + P2 |
-| `createdBy` / uploader | `User` obligatoire | P1 |
-| Init chaîne auto | Manuel | P2 |
-| Front espace demandeur | Absent | P4 |
-| Suivi demandeur | Absent | P4 + P6 |
-| Admin config + comptes portail | Absent | P5 |
+| `PortalUser` + auth | Fait | P1 + P3 |
+| Variantes interne / externe | Fait | P1 + P2 + P4 |
+| Création admin + activation mdp | Fait (API + UI admin) | P3 + P5 |
+| Formulaire par type | `formSchema` sur FileType | P1 + P2 + P5 |
+| `createdBy` / uploader | Nullable + FK portal | P1 |
+| Init chaîne auto | Fait (soumission portail) | P2 |
+| Front espace demandeur | Fait (`/portal/**`) | P4 |
+| Suivi demandeur | Lecture seule UI ; emails en P6 | P4 + P6 |
+| Admin config + comptes portail | Fait | P5 |
 
 ---
 
@@ -366,3 +367,8 @@ P5 Admin  P4 Front demandeur (interne / externe)
 | 2026-07-24 | Équipe produit / technique | Remise mdp provisoire figée : one-shot UI admin ± email |
 | 2026-07-24 | Équipe produit / technique | Auth externe figée : OTP email (chaque connexion) |
 | 2026-07-24 | Équipe produit / technique | Pilote MVP figé : ≥1 type interne (congé) ; externe optionnel |
+| 2026-07-24 | Équipe technique | P1 implémenté — SQL + entités + realm JWT portail |
+| 2026-07-24 | Équipe technique | P2 implémenté — FormSchemaValidator, soumission auto, APIs portail + admin |
+| 2026-07-24 | Équipe technique | P3 implémenté — login/activate interne, OTP externe, admin portal-users |
+| 2026-07-24 | Équipe technique | P4 implémenté — front portail interne/externe (auth, catalogue, soumission, suivi) |
+| 2026-07-24 | Équipe technique | P5 implémenté — admin config FileType portail + CRUD comptes internes (one-shot mdp) |

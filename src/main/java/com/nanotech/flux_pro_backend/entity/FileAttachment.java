@@ -49,8 +49,15 @@ public class FileAttachment {
     private boolean responseDocument;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploaded_by_id", nullable = false)
+    @JoinColumn(name = "uploaded_by_id")
     private User uploadedBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by_portal_user_id")
+    private PortalUser uploadedByPortalUser;
+
+    @Column(name = "portal_attachment_key", length = 64)
+    private String portalAttachmentKey;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

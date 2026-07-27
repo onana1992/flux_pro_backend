@@ -24,10 +24,20 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
             SELECT DISTINCT f FROM FileEntity f
             LEFT JOIN FETCH f.organization
             LEFT JOIN FETCH f.chainTemplate
-            LEFT JOIN FETCH f.createdBy
+            LEFT JOIN FETCH f.preconfiguredDossier
+            LEFT JOIN FETCH f.createdBy cb
+            LEFT JOIN FETCH cb.organization
+            LEFT JOIN FETCH f.portalUser pu
+            LEFT JOIN FETCH pu.organization
             WHERE f.id = :id
             """)
     Optional<FileEntity> findByIdWithDetails(@Param("id") UUID id);
+
+    Page<FileEntity> findByPortalUserIdOrderByCreatedAtDesc(UUID portalUserId, Pageable pageable);
+
+    Optional<FileEntity> findByReferenceNumberIgnoreCaseAndPortalUserId(String referenceNumber, UUID portalUserId);
+
+    Optional<FileEntity> findByIdAndPortalUserId(UUID id, UUID portalUserId);
 
     /**
      * Liste /files : rôles à scope global voient tout ({@code allAccessible=true}) ;

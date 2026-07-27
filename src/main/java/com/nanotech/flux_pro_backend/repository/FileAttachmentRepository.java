@@ -12,4 +12,6 @@ public interface FileAttachmentRepository extends JpaRepository<FileAttachment, 
     List<FileAttachment> findByFileIdOrderByCreatedAtAsc(UUID fileId);
 
     Optional<FileAttachment> findByIdAndFileId(UUID id, UUID fileId);
+
+    long countByFileIdAndPortalAttachmentKey(UUID fileId, String portalAttachmentKey);
 }

@@ -168,6 +168,16 @@ public class EmailService {
         }
     }
 
+    /** Email transactionnel simple (OTP portail, bienvenue, etc.). */
+    public void sendTransactionalHtml(String intendedTo, String subject, String htmlBody) {
+        String notice = redirectNotice(intendedTo);
+        String html = htmlBody;
+        if (notice != null) {
+            html = htmlBody + "<p style=\"color:#666;font-size:12px\">" + notice + "</p>";
+        }
+        sendHtml(intendedTo, subject, html);
+    }
+
     private String resolveTo(String intendedTo) {
         String redirectTo = tenantSettingsService.emailRedirectTo();
         if (redirectTo.isEmpty()) {

@@ -46,6 +46,24 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    /**
+     * JWT realm portail — claim {@code type=portal_access}, distinct du token métier.
+     */
+    public String createPortalAccessToken(PortalSecurityUser user) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + accessExpirationMs);
+        return Jwts.builder()
+                .subject(user.getId().toString())
+                .claim("email", user.getEmail())
+                .claim("portalUserType", user.getPortalUserType().name())
+                .claim("mustChangePassword", user.isMustChangePassword())
+                .claim("type", "portal_access")
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(secretKey)
+                .compact();
+    }
+
     public String createRefreshTokenValue() {
         return UUID.randomUUID().toString() + "." + UUID.randomUUID();
     }
@@ -68,6 +86,10 @@ public class JwtTokenProvider {
 
     public boolean isAccessToken(Claims claims) {
         return "access".equals(claims.get("type", String.class));
+    }
+
+    public boolean isPortalAccessToken(Claims claims) {
+        return "portal_access".equals(claims.get("type", String.class));
     }
 
     public UUID getUserId(Claims claims) {
