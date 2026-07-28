@@ -1,0 +1,17 @@
+.git
+.github
+.idea
+.vscode
+.cursor
+*.iml
+target
+data
+application-secrets.properties
+**/application-secrets.properties
+docs
+new doc
+*.md
+!README.md
+.env
+.env.*
+mvnw.cmd
