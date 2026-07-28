@@ -187,7 +187,12 @@ public class AlertEngineService {
             alert.setRecipient(recipient);
             alert.setStatus(AlertStatus.PENDING);
             alert = alertRepository.save(alert);
-            notificationService.dispatch(alert);
+            UUID alertId = alert.getId();
+            if (channel == AlertChannel.EMAIL) {
+                notificationService.dispatchEmailAsync(alertId);
+            } else {
+                notificationService.dispatchById(alertId);
+            }
         }
     }
 

@@ -133,12 +133,32 @@ public final class FileMapper {
             uploaderName = attachment.getUploadedByPortalUser().getFirstName()
                     + " " + attachment.getUploadedByPortalUser().getLastName();
         }
+        var kind = attachment.getAttachmentKind() != null
+                ? attachment.getAttachmentKind()
+                : (attachment.isResponseDocument()
+                        ? com.nanotech.flux_pro_backend.enumeration.AttachmentKind.CLOSURE
+                        : com.nanotech.flux_pro_backend.enumeration.AttachmentKind.CREATION);
+        UUID passageId = null;
+        String passageLabel = null;
+        Integer passageStepOrder = null;
+        if (attachment.getPassage() != null) {
+            passageId = attachment.getPassage().getId();
+            passageStepOrder = attachment.getPassage().getStepOrder();
+            if (attachment.getPassage().getChainStepTemplate() != null) {
+                passageLabel = attachment.getPassage().getChainStepTemplate().getLabel();
+            }
+        }
         return new FileAttachmentResponse(
                 attachment.getId(),
                 attachment.getOriginalFilename(),
                 attachment.getContentType(),
                 attachment.getSizeBytes(),
-                attachment.isResponseDocument(),
+                kind,
+                kind == com.nanotech.flux_pro_backend.enumeration.AttachmentKind.CLOSURE,
+                passageId,
+                passageLabel,
+                passageStepOrder,
+                attachment.isPortalVisible(),
                 uploadedById,
                 uploaderName,
                 attachment.getCreatedAt());

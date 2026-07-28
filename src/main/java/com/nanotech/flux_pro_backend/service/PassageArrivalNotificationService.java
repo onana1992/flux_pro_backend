@@ -13,9 +13,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,7 +24,7 @@ import java.util.UUID;
 
 /**
  * Notifications d'arrivée d'un dossier sur un maillon : responsable + copies informées (CHN-09).
- * Canaux : IN_APP + EMAIL (même stack que ALR-05).
+ * Canaux : IN_APP (synchrone) + EMAIL (async après commit — ne bloque pas la requête HTTP).
  */
 @Service
 @RequiredArgsConstructor
@@ -87,8 +88,13 @@ public class PassageArrivalNotificationService {
             alert.setRecipient(recipient);
             alert.setStatus(AlertStatus.PENDING);
             alert = alertRepository.save(alert);
+            UUID alertId = alert.getId();
             try {
-                notificationService.dispatch(alert);
+                if (channel == AlertChannel.EMAIL) {
+                    scheduleEmailAfterCommit(alertId);
+                } else {
+                    notificationService.dispatchById(alertId);
+                }
             } catch (Exception e) {
                 log.warn(
                         "CHN: dispatch {} échoué pour {} / passage {} : {}",
@@ -98,5 +104,18 @@ public class PassageArrivalNotificationService {
                         e.getMessage());
             }
         }
+    }
+
+    private void scheduleEmailAfterCommit(UUID alertId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            notificationService.dispatchEmailAsync(alertId);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationService.dispatchEmailAsync(alertId);
+            }
+        });
     }
 }

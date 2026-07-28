@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,7 +88,13 @@ class PassageArrivalNotificationServiceTest {
         ccType.setActive(true);
 
         when(notificationService.activeChannels()).thenReturn(List.of(AlertChannel.IN_APP, AlertChannel.EMAIL));
-        org.mockito.Mockito.lenient().when(alertRepository.save(any(Alert.class))).thenAnswer(inv -> inv.getArgument(0));
+        org.mockito.Mockito.lenient().when(alertRepository.save(any(Alert.class))).thenAnswer(inv -> {
+            Alert a = inv.getArgument(0);
+            if (a.getId() == null) {
+                a.setId(UUID.randomUUID());
+            }
+            return a;
+        });
         when(substituteService.effectiveRecipient(responsible)).thenReturn(responsible);
         when(alertTypeRepository.findByCodeIgnoreCase(PassageArrivalNotificationService.TYPE_ARRIVAL))
                 .thenReturn(Optional.of(arrivalType));
@@ -102,14 +109,19 @@ class PassageArrivalNotificationServiceTest {
     void notifyArrival_sendsToResponsibleAndCc() {
         service.notifyArrival(passage);
 
-        ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
-        verify(notificationService, atLeastOnce()).dispatch(captor.capture());
-        List<Alert> alerts = captor.getAllValues();
+        ArgumentCaptor<Alert> saveCaptor = ArgumentCaptor.forClass(Alert.class);
+        verify(alertRepository, times(4)).save(saveCaptor.capture());
+        List<Alert> alerts = saveCaptor.getAllValues();
         assertThat(alerts).hasSize(4); // 2 recipients × 2 channels
         assertThat(alerts).anyMatch(a -> a.getRecipient().getId().equals(responsible.getId())
                 && a.getAlertType().getCode().equals(PassageArrivalNotificationService.TYPE_ARRIVAL));
         assertThat(alerts).anyMatch(a -> a.getRecipient().getId().equals(ccUser.getId())
                 && a.getAlertType().getCode().equals(PassageArrivalNotificationService.TYPE_CC));
+
+        // IN_APP synchrone, EMAIL async (hors transaction de test → dispatchEmailAsync direct)
+        verify(notificationService, times(2)).dispatchById(any(UUID.class));
+        verify(notificationService, times(2)).dispatchEmailAsync(any(UUID.class));
+        verify(notificationService, never()).dispatch(any());
     }
 
     @Test
@@ -119,5 +131,7 @@ class PassageArrivalNotificationServiceTest {
         service.notifyArrival(passage);
 
         verify(notificationService, never()).dispatch(any());
+        verify(notificationService, never()).dispatchById(any());
+        verify(notificationService, never()).dispatchEmailAsync(any());
     }
 }

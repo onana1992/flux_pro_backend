@@ -13,6 +13,7 @@ import com.nanotech.flux_pro_backend.entity.FileEntity;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.PortalUser;
 import com.nanotech.flux_pro_backend.entity.PreconfiguredDossier;
+import com.nanotech.flux_pro_backend.enumeration.AttachmentKind;
 import com.nanotech.flux_pro_backend.enumeration.FilePriority;
 import com.nanotech.flux_pro_backend.enumeration.FileStatus;
 import com.nanotech.flux_pro_backend.enumeration.PassageStatus;
@@ -32,6 +33,7 @@ import com.nanotech.flux_pro_backend.service.FileService;
 import com.nanotech.flux_pro_backend.service.PassageService;
 import com.nanotech.flux_pro_backend.service.PreconfiguredDossierService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -175,7 +177,9 @@ public class PortalSubmissionService {
         attachment.setSizeBytes(multipart.getSize());
         attachment.setStorageBucket(storageService.defaultBucket());
         attachment.setStorageKey(storageKey);
+        attachment.setAttachmentKind(AttachmentKind.CREATION);
         attachment.setResponseDocument(false);
+        attachment.setPortalVisible(false);
         attachment.setUploadedBy(null);
         attachment.setUploadedByPortalUser(portalUser);
         if (attachmentKey != null && !attachmentKey.isBlank()) {
@@ -357,6 +361,7 @@ public class PortalSubmissionService {
 
     private PortalSubmissionResponse toResponse(FileEntity file) {
         var attachments = fileAttachmentRepository.findByFileIdOrderByCreatedAtAsc(file.getId()).stream()
+                .filter(this::isVisibleOnPortal)
                 .map(FileMapper::toAttachment)
                 .toList();
         String stepLabel = null;
@@ -392,5 +397,52 @@ public class PortalSubmissionService {
                 attachments,
                 file.getCreatedAt(),
                 file.getUpdatedAt());
+    }
+
+    /**
+     * Téléchargement d'une PJ visible sur le portail (CREATION toujours ;
+     * CLOSURE seulement si {@code portalVisible}).
+     */
+    @Transactional(readOnly = true)
+    public PortalAttachmentDownload downloadAttachment(
+            UUID submissionId, UUID attachmentId, PortalSecurityUser actor) {
+        FileEntity file = loadOwnedSubmission(submissionId, actor);
+        FileAttachment attachment = requireVisibleAttachment(file, attachmentId);
+        Resource resource = fileAttachmentService.download(file, attachment.getId());
+        return new PortalAttachmentDownload(
+                resource,
+                attachment.getOriginalFilename(),
+                attachment.getContentType() != null && !attachment.getContentType().isBlank()
+                        ? attachment.getContentType()
+                        : "application/octet-stream");
+    }
+
+    public record PortalAttachmentDownload(Resource resource, String filename, String contentType) {}
+
+    private FileEntity loadOwnedSubmission(UUID submissionId, PortalSecurityUser actor) {
+        assertCanUsePortal(actor);
+        return fileRepository.findByIdAndPortalUserId(submissionId, actor.getId())
+                .orElseThrow(() -> AppException.notFound("PORTAL_SUBMISSION_NOT_FOUND", "Submission not found"));
+    }
+
+    private FileAttachment requireVisibleAttachment(FileEntity file, UUID attachmentId) {
+        FileAttachment attachment = fileAttachmentRepository.findByIdAndFileId(attachmentId, file.getId())
+                .orElseThrow(() -> AppException.notFound("FILE_ATTACHMENT_NOT_FOUND", "Attachment not found"));
+        if (!isVisibleOnPortal(attachment)) {
+            throw AppException.notFound("FILE_ATTACHMENT_NOT_FOUND", "Attachment not found");
+        }
+        return attachment;
+    }
+
+    /** CREATION toujours (demandeur) ; CLOSURE seulement si portalVisible ; PASSAGE jamais. */
+    private boolean isVisibleOnPortal(FileAttachment attachment) {
+        AttachmentKind kind = attachment.getAttachmentKind() != null
+                ? attachment.getAttachmentKind()
+                : (attachment.isResponseDocument() ? AttachmentKind.CLOSURE : AttachmentKind.CREATION);
+        return switch (kind) {
+            case CREATION -> true;
+            case CLOSURE -> attachment.isPortalVisible();
+            case PASSAGE -> false;
+        };
     }
 }

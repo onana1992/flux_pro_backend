@@ -9,10 +9,13 @@ import com.nanotech.flux_pro_backend.security.SecurityUtils;
 import com.nanotech.flux_pro_backend.service.portal.PortalSubmissionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -79,5 +82,15 @@ public class PortalSubmissionController {
         } catch (IllegalArgumentException ignored) {
             return portalSubmissionService.getByRef(ref, securityUtils.currentPortalUser());
         }
+    }
+
+    @GetMapping("/submissions/{id}/attachments/{aid}/download")
+    public ResponseEntity<Resource> downloadAttachment(
+            @PathVariable UUID id, @PathVariable UUID aid) {
+        var download = portalSubmissionService.downloadAttachment(id, aid, securityUtils.currentPortalUser());
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(download.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + download.filename() + "\"")
+                .body(download.resource());
     }
 }

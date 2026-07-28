@@ -13,6 +13,7 @@ import com.nanotech.flux_pro_backend.entity.FileNumberSequence;
 import com.nanotech.flux_pro_backend.entity.FileType;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.User;
+import com.nanotech.flux_pro_backend.enumeration.AttachmentKind;
 import com.nanotech.flux_pro_backend.enumeration.FilePriority;
 import com.nanotech.flux_pro_backend.enumeration.FileStatus;
 import com.nanotech.flux_pro_backend.mapper.FileMapper;
@@ -185,7 +186,11 @@ public class FileService {
             var attachment = fileAttachmentRepository.findByIdAndFileId(request.responseAttachmentId(), file.getId())
                     .orElseThrow(() -> FileException.badRequest(
                             "FILE_CLOSURE_INCOMPLETE", "Response attachment not found on this file"));
-            if (!attachment.isResponseDocument()) {
+            if (attachment.getAttachmentKind() != AttachmentKind.CLOSURE) {
+                attachment.setAttachmentKind(AttachmentKind.CLOSURE);
+                attachment.setResponseDocument(true);
+                fileAttachmentRepository.save(attachment);
+            } else if (!attachment.isResponseDocument()) {
                 attachment.setResponseDocument(true);
                 fileAttachmentRepository.save(attachment);
             }

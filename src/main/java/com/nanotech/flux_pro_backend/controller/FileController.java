@@ -1,5 +1,7 @@
 package com.nanotech.flux_pro_backend.controller;
 
+import com.nanotech.flux_pro_backend.common.FileException;
+import com.nanotech.flux_pro_backend.dto.request.AttachmentPortalVisibilityRequest;
 import com.nanotech.flux_pro_backend.dto.request.FileCancelRequest;
 import com.nanotech.flux_pro_backend.dto.request.FileCloseRequest;
 import com.nanotech.flux_pro_backend.dto.request.FileCreateRequest;
@@ -7,6 +9,7 @@ import com.nanotech.flux_pro_backend.dto.request.FileUpdateRequest;
 import com.nanotech.flux_pro_backend.dto.response.FileAttachmentResponse;
 import com.nanotech.flux_pro_backend.dto.response.FileDetailResponse;
 import com.nanotech.flux_pro_backend.dto.response.FileSummaryResponse;
+import com.nanotech.flux_pro_backend.enumeration.AttachmentKind;
 import com.nanotech.flux_pro_backend.enumeration.FilePriority;
 import com.nanotech.flux_pro_backend.enumeration.FileStatus;
 import com.nanotech.flux_pro_backend.entity.FileEntity;
@@ -126,14 +129,35 @@ public class FileController {
     }
 
     @PostMapping(value = "/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @RequiresPermission(RbacPermissions.FILES_UPDATE)
+    @RequiresPermission({RbacPermissions.FILES_UPDATE, RbacPermissions.FILES_TRANSMIT})
     @ResponseStatus(HttpStatus.CREATED)
     public FileAttachmentResponse uploadAttachment(
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String kind,
+            @RequestParam(required = false) UUID passageId,
+            @RequestParam(required = false) Boolean portalVisible,
             @RequestParam(defaultValue = "false") boolean responseDocument) {
         FileEntity fileEntity = fileService.loadForAttachment(id, securityUtils.currentUser());
-        return fileAttachmentService.upload(fileEntity, file, responseDocument, securityUtils.currentUser());
+        AttachmentKind attachmentKind = resolveKindParam(kind, responseDocument);
+        return fileAttachmentService.upload(
+                fileEntity,
+                file,
+                attachmentKind,
+                passageId,
+                portalVisible,
+                securityUtils.currentUser());
+    }
+
+    @PatchMapping("/{id}/attachments/{aid}/portal-visibility")
+    @RequiresPermission(RbacPermissions.FILES_UPDATE)
+    public FileAttachmentResponse updateAttachmentPortalVisibility(
+            @PathVariable UUID id,
+            @PathVariable UUID aid,
+            @RequestBody AttachmentPortalVisibilityRequest request) {
+        FileEntity fileEntity = fileService.loadForAttachment(id, securityUtils.currentUser());
+        return fileAttachmentService.updatePortalVisibility(
+                fileEntity, aid, request.portalVisible(), securityUtils.currentUser());
     }
 
     @GetMapping("/{id}/attachments")
@@ -157,10 +181,22 @@ public class FileController {
     }
 
     @DeleteMapping("/{id}/attachments/{aid}")
-    @RequiresPermission(RbacPermissions.FILES_UPDATE)
+    @RequiresPermission({RbacPermissions.FILES_UPDATE, RbacPermissions.FILES_TRANSMIT})
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteAttachment(@PathVariable UUID id, @PathVariable UUID aid) {
         FileEntity fileEntity = fileService.loadForAttachment(id, securityUtils.currentUser());
-        fileAttachmentService.delete(fileEntity, aid);
+        fileAttachmentService.delete(fileEntity, aid, securityUtils.currentUser());
+    }
+
+    private static AttachmentKind resolveKindParam(String kind, boolean responseDocument) {
+        if (kind != null && !kind.isBlank()) {
+            try {
+                return AttachmentKind.valueOf(kind.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw FileException.badRequest(
+                        "FILE_ATTACHMENT_KIND_INVALID", "Unknown attachment kind: " + kind, kind);
+            }
+        }
+        return responseDocument ? AttachmentKind.CLOSURE : AttachmentKind.CREATION;
     }
 }

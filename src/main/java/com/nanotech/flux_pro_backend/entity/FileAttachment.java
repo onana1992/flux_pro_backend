@@ -1,7 +1,10 @@
 package com.nanotech.flux_pro_backend.entity;
 
+import com.nanotech.flux_pro_backend.enumeration.AttachmentKind;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -45,8 +48,24 @@ public class FileAttachment {
     @Column(name = "storage_key", nullable = false, length = 512)
     private String storageKey;
 
+    /**
+     * @deprecated remplacé par {@link #attachmentKind} == {@link AttachmentKind#CLOSURE} ;
+     * conservé pour compatibilité / backfill.
+     */
     @Column(name = "response_document", nullable = false)
     private boolean responseDocument;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "attachment_kind", nullable = false, length = 20)
+    private AttachmentKind attachmentKind = AttachmentKind.CREATION;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "passage_id")
+    private FilePassage passage;
+
+    /** Visible sur le portail (surtout CLOSURE pour dossiers portail). */
+    @Column(name = "portal_visible", nullable = false)
+    private boolean portalVisible;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by_id")
@@ -65,5 +84,9 @@ public class FileAttachment {
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
+        if (attachmentKind == null) {
+            attachmentKind = responseDocument ? AttachmentKind.CLOSURE : AttachmentKind.CREATION;
+        }
+        responseDocument = attachmentKind == AttachmentKind.CLOSURE;
     }
 }
