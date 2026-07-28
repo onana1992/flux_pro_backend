@@ -12,22 +12,33 @@ import java.util.UUID;
 
 public interface AdminAuditLogRepository extends JpaRepository<AdminAuditLog, UUID> {
 
+    /**
+     * Filtres optionnels via flags booléens — évite {@code :param IS NULL} que PostgreSQL
+     * ne type pas ({@code could not determine data type of parameter}).
+     */
     @Query("""
             SELECT a FROM AdminAuditLog a
-            WHERE (:resourceType IS NULL OR :resourceType = '' OR a.resourceType = :resourceType)
-              AND (:action IS NULL OR :action = '' OR a.action = :action)
-              AND (:actorEmail IS NULL OR :actorEmail = '' OR LOWER(a.actorEmail) LIKE LOWER(CONCAT('%', :actorEmail, '%')))
-              AND (:success IS NULL OR a.success = :success)
-              AND (:from IS NULL OR a.createdAt >= :from)
-              AND (:to IS NULL OR a.createdAt <= :to)
+            WHERE (:resourceTypeEmpty = TRUE OR a.resourceType = :resourceType)
+              AND (:actionEmpty = TRUE OR a.action = :action)
+              AND (:actorEmailEmpty = TRUE
+                   OR LOWER(a.actorEmail) LIKE LOWER(CONCAT('%', :actorEmail, '%')))
+              AND (:hasSuccess = FALSE OR a.success = :success)
+              AND (:hasFrom = FALSE OR a.createdAt >= :from)
+              AND (:hasTo = FALSE OR a.createdAt <= :to)
             ORDER BY a.createdAt DESC
             """)
     Page<AdminAuditLog> search(
+            @Param("resourceTypeEmpty") boolean resourceTypeEmpty,
             @Param("resourceType") String resourceType,
+            @Param("actionEmpty") boolean actionEmpty,
             @Param("action") String action,
+            @Param("actorEmailEmpty") boolean actorEmailEmpty,
             @Param("actorEmail") String actorEmail,
-            @Param("success") Boolean success,
+            @Param("hasSuccess") boolean hasSuccess,
+            @Param("success") boolean success,
+            @Param("hasFrom") boolean hasFrom,
             @Param("from") Instant from,
+            @Param("hasTo") boolean hasTo,
             @Param("to") Instant to,
             Pageable pageable);
 }

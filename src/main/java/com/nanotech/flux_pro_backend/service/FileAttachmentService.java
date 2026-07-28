@@ -36,7 +36,7 @@ public class FileAttachmentService {
 
     private final FileAttachmentRepository fileAttachmentRepository;
     private final UserRepository userRepository;
-    private final LocalAttachmentStorageService storageService;
+    private final AttachmentStorageService storageService;
 
     @Transactional(readOnly = true)
     public List<FileAttachmentResponse> listForFile(FileEntity file) {
@@ -60,7 +60,9 @@ public class FileAttachmentService {
                     file.getOrganization(),
                     file.getId(),
                     multipart.getOriginalFilename(),
-                    multipart.getInputStream());
+                    multipart.getInputStream(),
+                    multipart.getSize(),
+                    multipart.getContentType());
         } catch (IOException e) {
             throw FileException.badRequest(
                     "FILE_ATTACHMENT_STORE_FAILED", "Failed to store attachment: " + e.getMessage(),
@@ -72,7 +74,7 @@ public class FileAttachmentService {
         attachment.setOriginalFilename(multipart.getOriginalFilename());
         attachment.setContentType(multipart.getContentType() != null ? multipart.getContentType() : "application/octet-stream");
         attachment.setSizeBytes(multipart.getSize());
-        attachment.setStorageBucket(LocalAttachmentStorageService.BUCKET);
+        attachment.setStorageBucket(storageService.defaultBucket());
         attachment.setStorageKey(storageKey);
         attachment.setResponseDocument(responseDocument);
         attachment.setUploadedBy(uploader);
@@ -89,7 +91,7 @@ public class FileAttachmentService {
         FileAttachment attachment = fileAttachmentRepository.findByIdAndFileId(attachmentId, file.getId())
                 .orElseThrow(() -> FileException.notFound("FILE_ATTACHMENT_NOT_FOUND", "Attachment not found"));
         try {
-            storageService.delete(attachment.getStorageKey());
+            storageService.delete(attachment.getStorageBucket(), attachment.getStorageKey());
         } catch (IOException e) {
             throw FileException.badRequest(
                     "FILE_ATTACHMENT_DELETE_FAILED", "Failed to delete attachment file");
@@ -102,7 +104,7 @@ public class FileAttachmentService {
         FileAttachment attachment = fileAttachmentRepository.findByIdAndFileId(attachmentId, file.getId())
                 .orElseThrow(() -> FileException.notFound("FILE_ATTACHMENT_NOT_FOUND", "Attachment not found"));
         try {
-            return storageService.loadAsResource(attachment.getStorageKey());
+            return storageService.loadAsResource(attachment.getStorageBucket(), attachment.getStorageKey());
         } catch (IOException e) {
             throw FileException.notFound(
                     "FILE_ATTACHMENT_STORAGE_MISSING", "Attachment file not found on storage");

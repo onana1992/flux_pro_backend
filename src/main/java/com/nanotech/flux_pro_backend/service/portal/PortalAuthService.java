@@ -21,7 +21,6 @@ import com.nanotech.flux_pro_backend.security.PortalAuthRateLimiter;
 import com.nanotech.flux_pro_backend.security.PortalSecurityUser;
 import com.nanotech.flux_pro_backend.service.ClockService;
 import com.nanotech.flux_pro_backend.service.EmailService;
-import com.nanotech.flux_pro_backend.service.TenantSettingsService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,7 +45,6 @@ public class PortalAuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PortalAuthRateLimiter rateLimiter;
     private final EmailService emailService;
-    private final TenantSettingsService tenantSettingsService;
     private final ClockService clockService;
 
     @Value("${fluxpro.portal.otp.ttl-seconds:600}")
@@ -239,12 +237,10 @@ public class PortalAuthService {
         challenge.setExpiresAt(now.plus(otpTtlSeconds, ChronoUnit.SECONDS));
         otpChallengeRepository.save(challenge);
 
-        String product = tenantSettingsService.productName();
-        String subject = "[" + product + "] Code de vérification portail";
-        String html = "<p>Votre code OTP FluxPro Portail :</p>"
-                + "<p style=\"font-size:24px;font-weight:bold;letter-spacing:4px\">" + code + "</p>"
-                + "<p>Valable " + (otpTtlSeconds / 60) + " minutes. Ne le partagez pas.</p>";
-        emailService.sendTransactionalHtml(email, subject, html);
+        String firstName = portalUserRepository.findByEmailIgnoreCase(email)
+                .map(PortalUser::getFirstName)
+                .orElse(null);
+        emailService.sendPortalOtp(email, firstName, code, otpTtlSeconds);
 
         return new PortalOtpSentResponse("OTP sent", email, otpTtlSeconds);
     }

@@ -1,6 +1,9 @@
 package com.nanotech.flux_pro_backend.service;
 
 import com.nanotech.flux_pro_backend.common.DashboardException;
+import com.nanotech.flux_pro_backend.dto.response.AnalyticsStatusSliceResponse;
+import com.nanotech.flux_pro_backend.dto.response.AnalyticsTrendPointResponse;
+import com.nanotech.flux_pro_backend.dto.response.DashboardAnalyticsResponse;
 import com.nanotech.flux_pro_backend.dto.response.DashboardSummaryResponse;
 import com.nanotech.flux_pro_backend.dto.response.DelayByTypeResponse;
 import com.nanotech.flux_pro_backend.dto.response.MyActivityItemResponse;
@@ -16,6 +19,7 @@ import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.User;
 import com.nanotech.flux_pro_backend.enumeration.DashboardScopeWidth;
 import com.nanotech.flux_pro_backend.enumeration.DelayUnit;
+import com.nanotech.flux_pro_backend.enumeration.FileStatus;
 import com.nanotech.flux_pro_backend.enumeration.UserRole;
 import com.nanotech.flux_pro_backend.repository.FileRepository;
 import com.nanotech.flux_pro_backend.repository.FileTypeRepository;
@@ -35,6 +39,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -221,6 +226,192 @@ public class DashboardService {
             }
         }
 
+        return byGroup.entrySet().stream()
+                .map(e -> {
+                    long closedCount = e.getValue().size();
+                    long compliant = e.getValue().stream().filter(this::isCompliant).count();
+                    double rate = closedCount == 0 ? 0 : Math.round(compliant * 10000.0 / closedCount) / 100.0;
+                    Organization org = e.getKey();
+                    return new OrganizationRankingResponse(
+                            org.getId(), org.getCode(), org.getName(), closedCount, compliant, rate);
+                })
+                .sorted(Comparator.comparingDouble(OrganizationRankingResponse::complianceRate).reversed())
+                .toList();
+    }
+
+    /**
+     * Analyse BI — agrège KPI, tendances, répartitions et classements pour l'écran /rapports.
+     * Réutilise les mêmes définitions de retard / délai que les widgets dashboard.
+     */
+    @Transactional(readOnly = true)
+    public DashboardAnalyticsResponse analytics(
+            SecurityUser actor,
+            UUID organizationId,
+            String fileTypeCode,
+            String groupByTypeCode,
+            int windowDays) {
+        validateWindowDays(windowDays);
+        String groupType = (groupByTypeCode == null || groupByTypeCode.isBlank()) ? "DIRECTORATE" : groupByTypeCode;
+        if (!organizationTypeRepository.existsByCode(groupType)) {
+            throw DashboardException.badRequest(
+                    "DASHBOARD_GROUP_TYPE_INVALID", "Type d'organisation inconnu : " + groupType, groupType);
+        }
+
+        ResolvedScope scope = resolveScope(actor, organizationId);
+        String organizationCode = resolveOrganizationCode(actor, organizationId);
+        String typeFilter = (fileTypeCode == null || fileTypeCode.isBlank()) ? null : fileTypeCode.trim();
+        String granularity = windowDays <= 45 ? "DAY" : "WEEK";
+
+        if (scope.empty()) {
+            return emptyAnalytics(organizationId, organizationCode, scope.width(), windowDays, granularity);
+        }
+
+        Instant now = clockService.now();
+        LocalDate today = now.atZone(delaiService.zoneId()).toLocalDate();
+        LocalDate windowStart = today.minusDays(windowDays - 1L);
+        Instant fromInstant = windowStart.atStartOfDay(delaiService.zoneId()).toInstant();
+
+        long active = fileRepository.countActiveByScope(scope.allOrgs(), scope.orgIds(), organizationId, typeFilter);
+        List<OverdueFileResponse> overdueList = filePassageRepository
+                .findOverdueForScope(now, scope.allOrgs(), scope.orgIds(), organizationId)
+                .stream()
+                .filter(p -> typeFilter == null || typeFilter.equalsIgnoreCase(p.getFile().getFileTypeCode()))
+                .map(p -> toOverdueResponse(p, now))
+                .toList();
+        long overdueCount = overdueList.stream().map(OverdueFileResponse::fileId).distinct().count();
+
+        List<FileEntity> closed = fileRepository.findClosedSinceFiltered(
+                fromInstant, scope.allOrgs(), scope.orgIds(), organizationId, typeFilter);
+        List<FileEntity> received = fileRepository.findReceivedBetweenFiltered(
+                windowStart, today, scope.allOrgs(), scope.orgIds(), organizationId, typeFilter);
+
+        long compliantClosed = closed.stream().filter(this::isCompliant).count();
+        double complianceRate = closed.isEmpty()
+                ? 0
+                : Math.round(compliantClosed * 10000.0 / closed.size()) / 100.0;
+        double averageDelay = closed.isEmpty()
+                ? 0
+                : Math.round(closed.stream().mapToInt(this::actualDelayDays).average().orElse(0) * 100.0) / 100.0;
+
+        List<AnalyticsTrendPointResponse> volumeTrend =
+                buildVolumeTrend(windowStart, today, granularity, received, closed);
+        List<AnalyticsStatusSliceResponse> statusBreakdown = fileRepository
+                .countByStatusInScope(scope.allOrgs(), scope.orgIds(), organizationId, typeFilter)
+                .stream()
+                .map(row -> new AnalyticsStatusSliceResponse(((FileStatus) row[0]).name(), (Long) row[1]))
+                .sorted(Comparator.comparing(AnalyticsStatusSliceResponse::status))
+                .toList();
+
+        List<DelayByTypeResponse> delayByType = buildDelayByType(closed);
+        List<OrganizationRankingResponse> ranking = buildComplianceRanking(closed, groupType);
+        List<WorkloadEntryResponse> workload = workload(actor, organizationId).stream().limit(15).toList();
+
+        return new DashboardAnalyticsResponse(
+                organizationId,
+                organizationCode,
+                scope.width(),
+                windowDays,
+                granularity,
+                active,
+                overdueCount,
+                closed.size(),
+                received.size(),
+                complianceRate,
+                averageDelay,
+                volumeTrend,
+                statusBreakdown,
+                delayByType,
+                ranking,
+                overdueList.stream().limit(20).toList(),
+                workload);
+    }
+
+    private DashboardAnalyticsResponse emptyAnalytics(
+            UUID organizationId,
+            String organizationCode,
+            DashboardScopeWidth width,
+            int windowDays,
+            String granularity) {
+        return new DashboardAnalyticsResponse(
+                organizationId, organizationCode, width, windowDays, granularity,
+                0, 0, 0, 0, 0, 0,
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+    }
+
+    private List<AnalyticsTrendPointResponse> buildVolumeTrend(
+            LocalDate windowStart,
+            LocalDate today,
+            String granularity,
+            List<FileEntity> received,
+            List<FileEntity> closed) {
+        Map<LocalDate, long[]> buckets = new LinkedHashMap<>();
+        if ("WEEK".equals(granularity)) {
+            LocalDate cursor = windowStart;
+            while (!cursor.isAfter(today)) {
+                LocalDate weekKey = cursor.minusDays(cursor.getDayOfWeek().getValue() - 1L);
+                buckets.putIfAbsent(weekKey, new long[3]);
+                cursor = cursor.plusDays(1);
+            }
+        } else {
+            for (LocalDate d = windowStart; !d.isAfter(today); d = d.plusDays(1)) {
+                buckets.put(d, new long[3]);
+            }
+        }
+
+        for (FileEntity f : received) {
+            if (f.getReceivedAt() == null) continue;
+            LocalDate key = bucketKey(f.getReceivedAt(), granularity);
+            long[] cell = buckets.get(key);
+            if (cell != null) cell[0]++;
+        }
+        for (FileEntity f : closed) {
+            if (f.getClosedAt() == null) continue;
+            LocalDate closedDate = f.getClosedAt().atZone(delaiService.zoneId()).toLocalDate();
+            LocalDate key = bucketKey(closedDate, granularity);
+            long[] cell = buckets.get(key);
+            if (cell != null) {
+                cell[1]++;
+                if (isCompliant(f)) cell[2]++;
+            }
+        }
+
+        return buckets.entrySet().stream()
+                .map(e -> new AnalyticsTrendPointResponse(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2]))
+                .toList();
+    }
+
+    private LocalDate bucketKey(LocalDate date, String granularity) {
+        if ("WEEK".equals(granularity)) {
+            return date.minusDays(date.getDayOfWeek().getValue() - 1L);
+        }
+        return date;
+    }
+
+    private List<DelayByTypeResponse> buildDelayByType(List<FileEntity> closed) {
+        Map<String, List<FileEntity>> byType = closed.stream()
+                .filter(f -> f.getFileTypeCode() != null)
+                .collect(Collectors.groupingBy(FileEntity::getFileTypeCode));
+        List<DelayByTypeResponse> results = new ArrayList<>();
+        for (Map.Entry<String, List<FileEntity>> entry : byType.entrySet()) {
+            String typeCode = entry.getKey();
+            List<FileEntity> files = entry.getValue();
+            double averageDelay = files.stream().mapToInt(this::actualDelayDays).average().orElse(0);
+            Integer targetDelay = resolveConsensusTargetDays(files);
+            String label = fileTypeRepository.findByCodeIgnoreCase(typeCode).map(FileType::getName).orElse(typeCode);
+            results.add(new DelayByTypeResponse(
+                    typeCode, label, files.size(), Math.round(averageDelay * 100.0) / 100.0, targetDelay));
+        }
+        return results.stream().sorted(Comparator.comparing(DelayByTypeResponse::fileTypeCode)).toList();
+    }
+
+    private List<OrganizationRankingResponse> buildComplianceRanking(List<FileEntity> closed, String groupByTypeCode) {
+        Map<Organization, List<FileEntity>> byGroup = new HashMap<>();
+        for (FileEntity file : closed) {
+            Organization group = resolveGroupAncestor(file.getOrganization(), groupByTypeCode);
+            if (group != null) {
+                byGroup.computeIfAbsent(group, g -> new ArrayList<>()).add(file);
+            }
+        }
         return byGroup.entrySet().stream()
                 .map(e -> {
                     long closedCount = e.getValue().size();

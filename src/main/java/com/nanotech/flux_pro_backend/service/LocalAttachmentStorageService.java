@@ -2,6 +2,7 @@ package com.nanotech.flux_pro_backend.service;
 
 import com.nanotech.flux_pro_backend.entity.Organization;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,8 @@ import java.time.Year;
 import java.util.UUID;
 
 @Service
-public class LocalAttachmentStorageService {
+@ConditionalOnProperty(name = "fluxpro.attachments.storage", havingValue = "local", matchIfMissing = true)
+public class LocalAttachmentStorageService implements AttachmentStorageService {
 
     public static final String BUCKET = "local";
 
@@ -26,11 +28,14 @@ public class LocalAttachmentStorageService {
         this.rootPath = Path.of(storagePath).toAbsolutePath().normalize();
     }
 
+    @Override
     public String store(
             Organization organization,
             UUID fileId,
             String originalFilename,
-            InputStream content) throws IOException {
+            InputStream content,
+            long contentLength,
+            String contentType) throws IOException {
         String orgCode = organization.getCode();
         int year = Year.now().getValue();
         String safeName = sanitizeFilename(originalFilename);
@@ -44,7 +49,8 @@ public class LocalAttachmentStorageService {
         return key;
     }
 
-    public Resource loadAsResource(String storageKey) throws IOException {
+    @Override
+    public Resource loadAsResource(String storageBucket, String storageKey) throws IOException {
         Path file = rootPath.resolve(storageKey).normalize();
         if (!file.startsWith(rootPath) || !Files.exists(file)) {
             throw new IOException("Attachment not found: " + storageKey);
@@ -52,11 +58,22 @@ public class LocalAttachmentStorageService {
         return new UrlResource(file.toUri());
     }
 
-    public void delete(String storageKey) throws IOException {
+    @Override
+    public void delete(String storageBucket, String storageKey) throws IOException {
         Path file = rootPath.resolve(storageKey).normalize();
         if (file.startsWith(rootPath) && Files.exists(file)) {
             Files.delete(file);
         }
+    }
+
+    @Override
+    public String defaultBucket() {
+        return BUCKET;
+    }
+
+    @Override
+    public String providerId() {
+        return "local";
     }
 
     private String sanitizeFilename(String filename) {

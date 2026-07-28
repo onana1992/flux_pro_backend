@@ -90,7 +90,7 @@ public class FileEntity extends BaseEntity {
     private Instant externalHoldSince;
 
     @Convert(converter = JsonMapConverter.class)
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private Map<String, Object> metadata;
 
     @OneToMany(mappedBy = "file")

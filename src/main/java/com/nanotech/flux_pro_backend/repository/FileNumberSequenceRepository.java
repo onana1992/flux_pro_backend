@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface FileNumberSequenceRepository extends JpaRepository<FileNumberSequence, FileNumberSequenceId> {
 
     /**
-     * Verrouillage ligne pour allocation séquentielle (MariaDB 10.4 : pas de {@code FOR UPDATE OF alias}).
+     * Verrouillage ligne pour allocation séquentielle (PostgreSQL / Neon).
      */
     @Query(
             value = """

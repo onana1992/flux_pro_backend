@@ -3,7 +3,7 @@ package com.nanotech.flux_pro_backend.email;
 import java.util.List;
 
 /**
- * Modèle commun pour le rendu des gabarits email (ALR-05 / ALR-08).
+ * Modèle commun pour le rendu des gabarits email (ALR-05 / ALR-08 / portail OTP).
  */
 public record EmailMessageModel(
         String productName,
@@ -23,7 +23,9 @@ public record EmailMessageModel(
         String fileUrl,
         String ctaLabel,
         List<EmailDigestItem> digestItems,
-        String redirectNotice
+        String redirectNotice,
+        String otpCode,
+        Integer otpValidityMinutes
 ) {
     public static Builder builder() {
         return new Builder();
@@ -48,6 +50,8 @@ public record EmailMessageModel(
         private String ctaLabel = "Ouvrir le dossier";
         private List<EmailDigestItem> digestItems = List.of();
         private String redirectNotice;
+        private String otpCode;
+        private Integer otpValidityMinutes;
 
         public Builder productName(String v) { this.productName = v; return this; }
         public Builder tenantBadge(String v) { this.tenantBadge = v; return this; }
@@ -65,8 +69,13 @@ public record EmailMessageModel(
         public Builder responsibleName(String v) { this.responsibleName = v; return this; }
         public Builder fileUrl(String v) { this.fileUrl = v; return this; }
         public Builder ctaLabel(String v) { this.ctaLabel = v; return this; }
-        public Builder digestItems(List<EmailDigestItem> v) { this.digestItems = v != null ? v : List.of(); return this; }
+        public Builder digestItems(List<EmailDigestItem> v) {
+            this.digestItems = v != null ? v : List.of();
+            return this;
+        }
         public Builder redirectNotice(String v) { this.redirectNotice = v; return this; }
+        public Builder otpCode(String v) { this.otpCode = v; return this; }
+        public Builder otpValidityMinutes(Integer v) { this.otpValidityMinutes = v; return this; }
 
         public EmailMessageModel build() {
             return new EmailMessageModel(
@@ -87,7 +96,9 @@ public record EmailMessageModel(
                     fileUrl,
                     ctaLabel,
                     digestItems,
-                    redirectNotice);
+                    redirectNotice,
+                    otpCode,
+                    otpValidityMinutes);
         }
     }
 }

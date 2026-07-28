@@ -22,6 +22,8 @@ import java.time.Instant;
 @RequiresPermission(RbacPermissions.LOGIN_AUDIT_READ)
 public class LoginAuditController {
 
+    private static final Instant INSTANT_PLACEHOLDER = Instant.EPOCH;
+
     private final LoginAuditRepository loginAuditRepository;
 
     @GetMapping
@@ -31,7 +33,20 @@ public class LoginAuditController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @PageableDefault(size = 50) Pageable pageable) {
-        return loginAuditRepository.search(email, success, from, to, pageable)
+        boolean emailEmpty = email == null || email.isBlank();
+        boolean hasSuccess = success != null;
+        boolean hasFrom = from != null;
+        boolean hasTo = to != null;
+        return loginAuditRepository.search(
+                        emailEmpty,
+                        emailEmpty ? "" : email.trim(),
+                        hasSuccess,
+                        Boolean.TRUE.equals(success),
+                        hasFrom,
+                        hasFrom ? from : INSTANT_PLACEHOLDER,
+                        hasTo,
+                        hasTo ? to : INSTANT_PLACEHOLDER,
+                        pageable)
                 .map(a -> new LoginAuditResponse(
                         a.getId(),
                         a.getEmail(),

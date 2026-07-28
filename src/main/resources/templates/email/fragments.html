@@ -125,5 +125,30 @@
   </tr>
 </th:block>
 
+<th:block th:fragment="otp-code">
+  <tr th:if="${m.otpCode != null and !#strings.isEmpty(m.otpCode)}">
+    <td style="padding:16px 28px 8px 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="background:#f7f9fb;border:1px solid #e2e8f0;border-radius:10px;">
+        <tr>
+          <td style="padding:20px 18px;" align="center">
+            <p style="margin:0 0 12px 0;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;font-weight:700;">
+              Code de vérification
+            </p>
+            <p style="margin:0;font-size:32px;line-height:1.2;font-weight:700;letter-spacing:0.28em;color:#0f172a;font-family:Consolas,'Courier New',monospace;"
+               th:text="${m.otpCode}">123456</p>
+            <p style="margin:14px 0 0 0;font-size:13px;line-height:1.5;color:#64748b;"
+               th:if="${m.otpValidityMinutes != null}">
+              Valable
+              <strong style="color:#334155;" th:text="${m.otpValidityMinutes}">10</strong>
+              minute(s). Ne le partagez avec personne.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</th:block>
+
 </body>
 </html>

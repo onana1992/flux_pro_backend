@@ -1,5 +1,6 @@
 package com.nanotech.flux_pro_backend.controller;
 
+import com.nanotech.flux_pro_backend.dto.response.DashboardAnalyticsResponse;
 import com.nanotech.flux_pro_backend.dto.response.DashboardSummaryResponse;
 import com.nanotech.flux_pro_backend.dto.response.DelayByTypeResponse;
 import com.nanotech.flux_pro_backend.dto.response.MyActivityResponse;
@@ -41,6 +42,18 @@ public class DashboardController {
             @RequestParam(required = false) UUID organizationId,
             @RequestParam(required = false) String fileTypeCode) {
         return dashboardService.summary(securityUtils.currentUser(), organizationId, fileTypeCode);
+    }
+
+    /** Analyse BI — KPI + tendances + breakdowns (écran /rapports). */
+    @GetMapping("/analytics")
+    @RequiresPermission(RbacPermissions.DASHBOARD_READ)
+    public DashboardAnalyticsResponse analytics(
+            @RequestParam(required = false) UUID organizationId,
+            @RequestParam(required = false) String fileTypeCode,
+            @RequestParam(defaultValue = "DIRECTORATE") String groupByTypeCode,
+            @RequestParam(defaultValue = "90") int windowDays) {
+        return dashboardService.analytics(
+                securityUtils.currentUser(), organizationId, fileTypeCode, groupByTypeCode, windowDays);
     }
 
     /** DSH-01 — jamais soumis à un `organizationId` : toujours l'activité de l'appelant. */

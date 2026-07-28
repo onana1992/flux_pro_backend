@@ -55,7 +55,7 @@ public class PreconfiguredDossier extends BaseEntity {
      * Comme à l'init circuit d'un dossier : 1er stage obligatoire, suivants optionnels.
      */
     @Convert(converter = JsonMapConverter.class)
-    @Column(name = "step_assignments", columnDefinition = "LONGTEXT")
+    @Column(name = "step_assignments", columnDefinition = "TEXT")
     private Map<String, Object> stepAssignments = new HashMap<>();
 
     @Column(name = "direction_code", length = 32)
@@ -76,10 +76,10 @@ public class PreconfiguredDossier extends BaseEntity {
 
     /** Formulaire de demande propriétaire (1:1, non réutilisable). */
     @Convert(converter = JsonMapConverter.class)
-    @Column(name = "form_schema", columnDefinition = "LONGTEXT")
+    @Column(name = "form_schema", columnDefinition = "TEXT")
     private Map<String, Object> formSchema;
 
     @Convert(converter = JsonStringListConverter.class)
-    @Column(name = "required_attachment_keys", columnDefinition = "LONGTEXT")
+    @Column(name = "required_attachment_keys", columnDefinition = "TEXT")
     private List<String> requiredAttachmentKeys = new ArrayList<>();
 }

@@ -156,4 +156,52 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
             @Param("allOrgs") boolean allOrgs,
             @Param("orgIds") Set<UUID> orgIds,
             @Param("organizationId") UUID organizationId);
+
+    /** Clôturés sur la fenêtre, filtrables par type — analyse BI. */
+    @Query("""
+            SELECT f FROM FileEntity f
+            LEFT JOIN FETCH f.chainTemplate
+            LEFT JOIN FETCH f.organization
+            WHERE f.status = com.nanotech.flux_pro_backend.enumeration.FileStatus.CLOSED
+              AND f.closedAt >= :from
+              AND (:allOrgs = true OR f.organization.id IN :orgIds)
+              AND (:organizationId IS NULL OR f.organization.id = :organizationId)
+              AND (:fileTypeCode IS NULL OR f.fileTypeCode = :fileTypeCode)
+            """)
+    List<FileEntity> findClosedSinceFiltered(
+            @Param("from") Instant from,
+            @Param("allOrgs") boolean allOrgs,
+            @Param("orgIds") Set<UUID> orgIds,
+            @Param("organizationId") UUID organizationId,
+            @Param("fileTypeCode") String fileTypeCode);
+
+    /** Reçus sur [from, to] — série temporelle analyse BI. */
+    @Query("""
+            SELECT f FROM FileEntity f
+            WHERE f.receivedAt >= :from AND f.receivedAt <= :to
+              AND (:allOrgs = true OR f.organization.id IN :orgIds)
+              AND (:organizationId IS NULL OR f.organization.id = :organizationId)
+              AND (:fileTypeCode IS NULL OR f.fileTypeCode = :fileTypeCode)
+            """)
+    List<FileEntity> findReceivedBetweenFiltered(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("allOrgs") boolean allOrgs,
+            @Param("orgIds") Set<UUID> orgIds,
+            @Param("organizationId") UUID organizationId,
+            @Param("fileTypeCode") String fileTypeCode);
+
+    /** Répartition par statut dans le périmètre (analyse BI). */
+    @Query("""
+            SELECT f.status, COUNT(f) FROM FileEntity f
+            WHERE (:allOrgs = true OR f.organization.id IN :orgIds)
+              AND (:organizationId IS NULL OR f.organization.id = :organizationId)
+              AND (:fileTypeCode IS NULL OR f.fileTypeCode = :fileTypeCode)
+            GROUP BY f.status
+            """)
+    List<Object[]> countByStatusInScope(
+            @Param("allOrgs") boolean allOrgs,
+            @Param("orgIds") Set<UUID> orgIds,
+            @Param("organizationId") UUID organizationId,
+            @Param("fileTypeCode") String fileTypeCode);
 }

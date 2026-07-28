@@ -12,18 +12,26 @@ import java.util.UUID;
 
 public interface LoginAuditRepository extends JpaRepository<LoginAudit, UUID> {
 
+    /**
+     * Filtres optionnels via flags booléens — évite {@code :param IS NULL} que PostgreSQL
+     * ne type pas ({@code could not determine data type of parameter}).
+     */
     @Query("""
             SELECT la FROM LoginAudit la
-            WHERE (:email IS NULL OR :email = '' OR LOWER(la.email) LIKE LOWER(CONCAT('%', :email, '%')))
-              AND (:success IS NULL OR la.success = :success)
-              AND (:from IS NULL OR la.createdAt >= :from)
-              AND (:to IS NULL OR la.createdAt <= :to)
+            WHERE (:emailEmpty = TRUE OR LOWER(la.email) LIKE LOWER(CONCAT('%', :email, '%')))
+              AND (:hasSuccess = FALSE OR la.success = :success)
+              AND (:hasFrom = FALSE OR la.createdAt >= :from)
+              AND (:hasTo = FALSE OR la.createdAt <= :to)
             ORDER BY la.createdAt DESC
             """)
     Page<LoginAudit> search(
+            @Param("emailEmpty") boolean emailEmpty,
             @Param("email") String email,
-            @Param("success") Boolean success,
+            @Param("hasSuccess") boolean hasSuccess,
+            @Param("success") boolean success,
+            @Param("hasFrom") boolean hasFrom,
             @Param("from") Instant from,
+            @Param("hasTo") boolean hasTo,
             @Param("to") Instant to,
             Pageable pageable);
 }

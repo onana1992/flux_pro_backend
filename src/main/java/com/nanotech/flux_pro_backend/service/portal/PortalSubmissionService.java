@@ -25,10 +25,10 @@ import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
 import com.nanotech.flux_pro_backend.repository.PortalUserRepository;
 import com.nanotech.flux_pro_backend.repository.PreconfiguredDossierRepository;
 import com.nanotech.flux_pro_backend.security.PortalSecurityUser;
+import com.nanotech.flux_pro_backend.service.AttachmentStorageService;
 import com.nanotech.flux_pro_backend.service.ClockService;
 import com.nanotech.flux_pro_backend.service.FileAttachmentService;
 import com.nanotech.flux_pro_backend.service.FileService;
-import com.nanotech.flux_pro_backend.service.LocalAttachmentStorageService;
 import com.nanotech.flux_pro_backend.service.PassageService;
 import com.nanotech.flux_pro_backend.service.PreconfiguredDossierService;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +57,7 @@ public class PortalSubmissionService {
     private final FileService fileService;
     private final PassageService passageService;
     private final FileAttachmentService fileAttachmentService;
-    private final LocalAttachmentStorageService storageService;
+    private final AttachmentStorageService storageService;
     private final ClockService clockService;
 
     @Transactional(readOnly = true)
@@ -158,7 +158,9 @@ public class PortalSubmissionService {
                     file.getOrganization(),
                     file.getId(),
                     multipart.getOriginalFilename(),
-                    multipart.getInputStream());
+                    multipart.getInputStream(),
+                    multipart.getSize(),
+                    multipart.getContentType());
         } catch (IOException e) {
             throw FileException.badRequest(
                     "FILE_ATTACHMENT_STORE_FAILED", "Failed to store attachment: " + e.getMessage(),
@@ -171,7 +173,7 @@ public class PortalSubmissionService {
         attachment.setContentType(
                 multipart.getContentType() != null ? multipart.getContentType() : "application/octet-stream");
         attachment.setSizeBytes(multipart.getSize());
-        attachment.setStorageBucket(LocalAttachmentStorageService.BUCKET);
+        attachment.setStorageBucket(storageService.defaultBucket());
         attachment.setStorageKey(storageKey);
         attachment.setResponseDocument(false);
         attachment.setUploadedBy(null);

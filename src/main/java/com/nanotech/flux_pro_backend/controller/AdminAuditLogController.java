@@ -22,6 +22,8 @@ import java.time.Instant;
 @RequiresPermission(RbacPermissions.AUDIT_LOG_READ)
 public class AdminAuditLogController {
 
+    private static final Instant INSTANT_PLACEHOLDER = Instant.EPOCH;
+
     private final AdminAuditLogRepository adminAuditLogRepository;
 
     @GetMapping
@@ -33,7 +35,26 @@ public class AdminAuditLogController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @PageableDefault(size = 50) Pageable pageable) {
-        return adminAuditLogRepository.search(resourceType, action, actorEmail, success, from, to, pageable)
+        boolean resourceTypeEmpty = resourceType == null || resourceType.isBlank();
+        boolean actionEmpty = action == null || action.isBlank();
+        boolean actorEmailEmpty = actorEmail == null || actorEmail.isBlank();
+        boolean hasSuccess = success != null;
+        boolean hasFrom = from != null;
+        boolean hasTo = to != null;
+        return adminAuditLogRepository.search(
+                        resourceTypeEmpty,
+                        resourceTypeEmpty ? "" : resourceType.trim(),
+                        actionEmpty,
+                        actionEmpty ? "" : action.trim(),
+                        actorEmailEmpty,
+                        actorEmailEmpty ? "" : actorEmail.trim(),
+                        hasSuccess,
+                        Boolean.TRUE.equals(success),
+                        hasFrom,
+                        hasFrom ? from : INSTANT_PLACEHOLDER,
+                        hasTo,
+                        hasTo ? to : INSTANT_PLACEHOLDER,
+                        pageable)
                 .map(a -> new AdminAuditLogResponse(
                         a.getId(),
                         a.getActorEmail(),

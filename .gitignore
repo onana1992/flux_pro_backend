@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Secrets locaux (S3, SMTP, etc.) ###
+application-secrets.properties
+.env
+.env.local
+

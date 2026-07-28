@@ -168,13 +168,37 @@ public class EmailService {
         }
     }
 
-    /** Email transactionnel simple (OTP portail, bienvenue, etc.). */
+    /** Email transactionnel simple (bienvenue, etc.). */
     public void sendTransactionalHtml(String intendedTo, String subject, String htmlBody) {
         String notice = redirectNotice(intendedTo);
         String html = htmlBody;
         if (notice != null) {
             html = htmlBody + "<p style=\"color:#666;font-size:12px\">" + notice + "</p>";
         }
+        sendHtml(intendedTo, subject, html);
+    }
+
+    /** OTP portail — gabarit {@code portal-otp} (même charte que les alertes). */
+    public void sendPortalOtp(String intendedTo, String recipientFirstName, String otpCode, int ttlSeconds) {
+        if (intendedTo == null || intendedTo.isBlank() || otpCode == null || otpCode.isBlank()) {
+            return;
+        }
+        int minutes = Math.max(1, (int) Math.ceil(ttlSeconds / 60.0));
+        String product = tenantSettingsService.productName();
+        EmailMessageModel model = EmailMessageModel.builder()
+                .productName(product)
+                .tenantBadge(tenantSettingsService.current().getBadge())
+                .alertLabel("Code de vérification portail")
+                .alertDescription("Connexion sécurisée au portail FluxPro.")
+                .intro("Utilisez le code ci-dessous pour finaliser votre connexion au portail.")
+                .tone("teal")
+                .recipientFirstName(recipientFirstName)
+                .otpCode(otpCode.trim())
+                .otpValidityMinutes(minutes)
+                .redirectNotice(redirectNotice(intendedTo))
+                .build();
+        String subject = "[" + product + "] Code de vérification portail";
+        String html = emailTemplateService.render("portal-otp", model);
         sendHtml(intendedTo, subject, html);
     }
 
@@ -235,6 +259,7 @@ public class EmailService {
             case "passage-arrival" -> "forest";
             case "passage-cc" -> "slate";
             case "alert-daily-digest" -> "navy";
+            case "portal-otp" -> "teal";
             default -> "navy";
         };
     }

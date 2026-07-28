@@ -38,6 +38,30 @@ class EmailTemplateServiceTest {
         assertThat(service.resolveTemplateCode("passage-arrival")).isEqualTo("passage-arrival");
         assertThat(service.resolveTemplateCode("passage-cc")).isEqualTo("passage-cc");
         assertThat(service.resolveTemplateCode("alert-daily-digest")).isEqualTo("alert-daily-digest");
+        assertThat(service.resolveTemplateCode("portal-otp")).isEqualTo("portal-otp");
+    }
+
+    @Test
+    void render_portalOtp_containsCodeAndBranding() {
+        EmailMessageModel model = EmailMessageModel.builder()
+                .productName("FluxPro")
+                .tenantBadge("MINTP")
+                .alertLabel("Code de vérification portail")
+                .intro("Utilisez le code ci-dessous.")
+                .tone("teal")
+                .recipientFirstName("Jean")
+                .otpCode("482913")
+                .otpValidityMinutes(10)
+                .build();
+
+        String html = service.render("portal-otp", model);
+
+        assertThat(html).contains("Code de vérification portail");
+        assertThat(html).contains("482913");
+        assertThat(html).contains("Jean");
+        assertThat(html).contains("FluxPro");
+        assertThat(html).contains("10");
+        assertThat(html).contains("Ne le partagez");
     }
 
     @Test

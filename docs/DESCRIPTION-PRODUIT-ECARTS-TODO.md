@@ -141,7 +141,7 @@ Légende : ✅ aligné · ⚠️ partiel · ❌ absent / hors périmètre volont
 | Types + numérotation | ✅ | `FileType`, séquences org |
 | Modèles de chaîne | ✅ | CRUD + étapes optionnelles / parallèles (même `stepOrder`) |
 | Transmission / retour / suspend / réaffecter | ✅ | `PassageService` |
-| Pièces jointes | ⚠️ | Upload/download local ; pas MinIO, pas versioning (volontairement hors GED documentaire) |
+| Pièces jointes | ⚠️ | Upload/download via API ; stockage **S3** (`S3AttachmentStorageService`) ou local ; pas de versioning GED — [guide S3](./GUIDE-IMPLEMENTATION-STOCKAGE-S3.md) |
 | Notifications in-app + email | ✅ | SMS non livré (Phase 2 CDC) |
 | Digest retards | ✅ | Email digest paramétrable |
 | Dashboard + exports | ⚠️ | CSV oui ; PDF non |
@@ -168,7 +168,7 @@ Légende : ✅ aligné · ⚠️ partiel · ❌ absent / hors périmètre volont
 | Item CDC / produit | État | Note |
 |--------------------|------|------|
 | Export PDF dashboard / fiche circulation | ❌ | Dashboard refuse PDF ; pas de lib PDF |
-| Stockage objet MinIO / S3 | ❌ | Commentaire config seulement ; disque `./data/attachments` |
+| Stockage objet MinIO / S3 | ✅ | `fluxpro.attachments.storage=s3` + `S3AttachmentStorageService` ; fallback `local` — [guide](./GUIDE-IMPLEMENTATION-STOCKAGE-S3.md) |
 | Canal SMS | ❌ | `AlertChannel` = IN_APP + EMAIL |
 | Intérim / suppléant (`User.substitute`) | ✅ | Délégation active tant que `substitute_id` est renseigné (pas de constat d’absence ni période). API + UI édition (org → utilisateur filtré) ; autorité passation, listes / dashboard, accès dossier, alertes via `SubstituteService` |
 | Hold externe dossier (`externalHold*`) | ✅ | Suspend / resume CHN-PASS ; `ON_HOLD` + ALR-07 ; UI circuit |
