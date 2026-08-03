@@ -211,19 +211,18 @@ Voir aussi : `docs/GUIDE-IMPLEMENTATION-STOCKAGE-S3.md` (si présent).
 
 ## 9. Brancher le frontend
 
-Sur `flux-pro-front` :
+Sur `flux-pro-front` (voir aussi `flux-pro-front/docs/GUIDE-DEPLOIEMENT-RENDER.md`) :
 
 ```text
 NEXT_PUBLIC_API_URL=https://flux-pro-backend.onrender.com
 ```
 
-Côté backend :
+Côté backend (URL du front Render, **sans** slash final) :
 
 ```text
-FLUXPRO_CORS_ALLOWED_ORIGINS=https://votre-front.vercel.app
-FLUXPRO_APP_BASE_URL=https://votre-front.vercel.app
+FLUXPRO_CORS_ALLOWED_ORIGINS=https://flux-pro-front.onrender.com
+FLUXPRO_APP_BASE_URL=https://flux-pro-front.onrender.com
 ```
-
 ---
 
 ## 10. Déploiement / redéploiement
