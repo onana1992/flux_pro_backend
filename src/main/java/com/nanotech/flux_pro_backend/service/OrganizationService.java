@@ -74,6 +74,17 @@ public class OrganizationService {
         return DtoMapper.toDetail(getById(id, user));
     }
 
+    @Transactional(readOnly = true)
+    public OrganizationDetailResponse getDetailByCode(String code, SecurityUser user) {
+        if (code == null || code.isBlank()) {
+            throw AppException.badRequest("ORGANIZATION_CODE_REQUIRED", "Organization code is required");
+        }
+        Organization org = organizationRepository.findByCode(code.trim())
+                .orElseThrow(() -> AppException.notFound(
+                        "ORGANIZATION_NOT_FOUND", "Organization not found: " + code, code));
+        return getDetailById(org.getId(), user);
+    }
+
     @Transactional
     public Organization create(OrganizationRequest request) {
         if (organizationRepository.existsByCode(request.code())) {

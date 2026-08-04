@@ -25,11 +25,16 @@ public class AccessControlService {
     private final FilePassageRepository filePassageRepository;
 
     public boolean canReadUsers(SecurityUser actor) {
-        return organizationScopeService.hasGlobalScope(actor)
+        if (organizationScopeService.hasGlobalScope(actor)
                 || actor.getRole() == UserRole.BUSINESS_ADMIN
                 || actor.getRole() == UserRole.DIRECTOR
                 || actor.getRole() == UserRole.SERVICE_HEAD
-                || actor.getRole() == UserRole.REGIONAL_DIRECTOR;
+                || actor.getRole() == UserRole.REGIONAL_DIRECTOR) {
+            return true;
+        }
+        // Aligné sur @RequiresPermission(USERS:READ) des contrôleurs REST
+        return actor.getPermissionNames() != null
+                && actor.getPermissionNames().contains(RbacPermissions.USERS_READ);
     }
 
     public boolean canWriteUsers(SecurityUser actor) {

@@ -13,8 +13,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -80,6 +82,16 @@ class OrganizationScopeServiceTest {
         assertTrue(filter.organizationIds().contains(drtpC.getId()));
         assertTrue(filter.organizationIds().contains(drtpCService.getId()));
         assertFalse(filter.organizationIds().contains(drtpLittoral.getId()));
+    }
+
+    @Test
+    void collectSelfAndDescendants_includesRootAndChildren() {
+        when(organizationRepository.findByParentId(drtpC.getId())).thenReturn(List.of(drtpCService));
+        when(organizationRepository.findByParentId(drtpCService.getId())).thenReturn(List.of());
+
+        Set<UUID> ids = organizationScopeService.collectSelfAndDescendants(drtpC.getId());
+
+        assertEquals(Set.of(drtpC.getId(), drtpCService.getId()), ids);
     }
 
     private static OrganizationType type(String code, boolean regionalScope) {

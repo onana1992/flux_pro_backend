@@ -82,23 +82,54 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     List<UUID> findActiveUserIdsBySubstituteId(@Param("substituteId") UUID substituteId);
 
+    /**
+     * Filtres texte via flags booléens + chaînes non-null — évite {@code LOWER(bytea)}
+     * côté PostgreSQL quand Hibernate lie un {@code String} null en bytea.
+     */
     @Query("""
             SELECT u FROM User u
             WHERE (:scopeAll = TRUE OR u.organization.id IN :organizationIds)
-              AND (:organizationId IS NULL OR u.organization.id = :organizationId)
-              AND (:role IS NULL OR u.role = :role)
-              AND (:search IS NULL OR :search = '' OR
+              AND (:hasOrganizationId = FALSE OR u.organization.id = :organizationId)
+              AND (:restrictToOrgs = FALSE OR u.organization.id IN :restrictOrgIds)
+              AND (:hasRole = FALSE OR u.role = :role)
+              AND (
+                   :searchEmpty = TRUE OR
                    LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR
                    LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR
                    LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                   LOWER(u.staffNumber) LIKE LOWER(CONCAT('%', :search, '%')))
+                   LOWER(u.staffNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                   LOWER(CONCAT(COALESCE(u.firstName, ''), ' ', COALESCE(u.lastName, '')))
+                        LIKE LOWER(CONCAT('%', :search, '%')) OR
+                   LOWER(CONCAT(COALESCE(u.lastName, ''), ' ', COALESCE(u.firstName, '')))
+                        LIKE LOWER(CONCAT('%', :search, '%')) OR
+                   (:hasToken1 = TRUE AND (
+                        LOWER(u.firstName) LIKE LOWER(CONCAT('%', :token1, '%')) OR
+                        LOWER(u.lastName) LIKE LOWER(CONCAT('%', :token1, '%')) OR
+                        LOWER(u.email) LIKE LOWER(CONCAT('%', :token1, '%')) OR
+                        LOWER(u.staffNumber) LIKE LOWER(CONCAT('%', :token1, '%'))
+                   ) AND (:hasToken2 = FALSE OR (
+                        LOWER(u.firstName) LIKE LOWER(CONCAT('%', :token2, '%')) OR
+                        LOWER(u.lastName) LIKE LOWER(CONCAT('%', :token2, '%')) OR
+                        LOWER(u.email) LIKE LOWER(CONCAT('%', :token2, '%')) OR
+                        LOWER(u.staffNumber) LIKE LOWER(CONCAT('%', :token2, '%'))
+                   )))
+              )
             """)
     Page<User> search(
             @Param("scopeAll") boolean scopeAll,
             @Param("organizationIds") Collection<UUID> organizationIds,
+            @Param("hasOrganizationId") boolean hasOrganizationId,
             @Param("organizationId") UUID organizationId,
+            @Param("restrictToOrgs") boolean restrictToOrgs,
+            @Param("restrictOrgIds") Collection<UUID> restrictOrgIds,
+            @Param("hasRole") boolean hasRole,
             @Param("role") UserRole role,
+            @Param("searchEmpty") boolean searchEmpty,
             @Param("search") String search,
+            @Param("hasToken1") boolean hasToken1,
+            @Param("token1") String token1,
+            @Param("hasToken2") boolean hasToken2,
+            @Param("token2") String token2,
             Pageable pageable);
 
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.organization.id = :organizationId")

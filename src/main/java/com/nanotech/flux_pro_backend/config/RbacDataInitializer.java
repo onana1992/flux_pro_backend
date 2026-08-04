@@ -103,6 +103,7 @@ public class RbacDataInitializer implements CommandLineRunner {
                 {RbacPermissions.BUSINESS_CALENDAR_DELETE, "BUSINESS_CALENDAR", "DELETE"},
                 {RbacPermissions.DASHBOARD_READ, "DASHBOARD", "READ"},
                 {RbacPermissions.DASHBOARD_EXPORT, "DASHBOARD", "EXPORT"},
+                {RbacPermissions.ASSISTANT_USE, "ASSISTANT", "USE"},
         };
         for (String[] def : definitions) {
             if (!permissionRepository.existsByName(def[0])) {
@@ -156,6 +157,7 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.BUSINESS_CALENDAR_DELETE);
         Set<String> dashboardRead = set(RbacPermissions.DASHBOARD_READ);
         Set<String> dashboardFull = set(RbacPermissions.DASHBOARD_READ, RbacPermissions.DASHBOARD_EXPORT);
+        Set<String> assistantUse = set(RbacPermissions.ASSISTANT_USE);
         Set<String> chainAdmin = set(
                 RbacPermissions.CHAIN_TEMPLATES_READ,
                 RbacPermissions.CHAIN_TEMPLATES_CREATE,
@@ -191,37 +193,37 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.FILES_TRANSMIT);
         Map<String, Set<String>> matrix = new HashMap<>();
         matrix.put(UserRole.SUPER_ADMIN.name(), allPermissions());
-        matrix.put(UserRole.BUSINESS_ADMIN.name(), merge(dashboardFull, merge(calendarAdmin, merge(set(
+        matrix.put(UserRole.BUSINESS_ADMIN.name(), merge(assistantUse, merge(dashboardFull, merge(calendarAdmin, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.USERS_CREATE, RbacPermissions.USERS_UPDATE,
                 RbacPermissions.ORGANIZATIONS_READ, RbacPermissions.ORGANIZATIONS_CREATE,
                 RbacPermissions.ORGANIZATIONS_UPDATE, RbacPermissions.ORGANIZATIONS_DELETE,
                 RbacPermissions.ORGANIZATION_TYPES_READ, RbacPermissions.ORGANIZATION_TYPES_CREATE,
                 RbacPermissions.ORGANIZATION_TYPES_UPDATE, RbacPermissions.ORGANIZATION_TYPES_DELETE,
                 RbacPermissions.ROLES_READ, RbacPermissions.PERMISSIONS_READ),
-                merge(chainAdmin, merge(fileTypesAdmin, merge(filesDirector, alertAdmin)))))));
+                merge(chainAdmin, merge(fileTypesAdmin, merge(filesDirector, alertAdmin))))))));
         Set<String> calendarRead = set(RbacPermissions.BUSINESS_CALENDAR_READ);
-        matrix.put(UserRole.DIRECTOR.name(), merge(dashboardFull, merge(calendarRead, merge(set(
+        matrix.put(UserRole.DIRECTOR.name(), merge(assistantUse, merge(dashboardFull, merge(calendarRead, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesDirector, alertRead)))))));
-        matrix.put(UserRole.SERVICE_HEAD.name(), merge(dashboardFull, merge(calendarRead, merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesDirector, alertRead))))))));
+        matrix.put(UserRole.SERVICE_HEAD.name(), merge(assistantUse, merge(dashboardFull, merge(calendarRead, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesServiceHead, alertRead)))))));
-        matrix.put(UserRole.REGIONAL_DIRECTOR.name(), merge(dashboardFull, merge(calendarRead, merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesServiceHead, alertRead))))))));
+        matrix.put(UserRole.REGIONAL_DIRECTOR.name(), merge(assistantUse, merge(dashboardFull, merge(calendarRead, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesRegionalDirector, alertRead)))))));
-        matrix.put(UserRole.SECRETARY_GENERAL.name(), merge(dashboardFull, merge(calendarRead, merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesRegionalDirector, alertRead))))))));
+        matrix.put(UserRole.SECRETARY_GENERAL.name(), merge(assistantUse, merge(dashboardFull, merge(calendarRead, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead)))))));
-        matrix.put(UserRole.EXECUTIVE_OFFICE.name(), merge(dashboardFull, merge(calendarRead, merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead))))))));
+        matrix.put(UserRole.EXECUTIVE_OFFICE.name(), merge(assistantUse, merge(dashboardFull, merge(calendarRead, merge(set(
                 RbacPermissions.USERS_READ, RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead)))))));
-        matrix.put(UserRole.AGENT.name(), merge(dashboardRead, merge(set(RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesAgent)))));
-        matrix.put(UserRole.SUPPORT.name(), merge(dashboardRead, merge(set(RbacPermissions.ORGANIZATIONS_READ),
-                merge(chainRead, merge(fileTypesRead, filesAgent)))));
-        matrix.put(UserRole.READER.name(), merge(dashboardRead, merge(set(
+                merge(chainRead, merge(fileTypesRead, merge(filesRead, alertRead))))))));
+        matrix.put(UserRole.AGENT.name(), merge(assistantUse, merge(dashboardRead, merge(set(RbacPermissions.ORGANIZATIONS_READ),
+                merge(chainRead, merge(fileTypesRead, filesAgent))))));
+        matrix.put(UserRole.SUPPORT.name(), merge(assistantUse, merge(dashboardRead, merge(set(RbacPermissions.ORGANIZATIONS_READ),
+                merge(chainRead, merge(fileTypesRead, filesAgent))))));
+        matrix.put(UserRole.READER.name(), merge(assistantUse, merge(dashboardRead, merge(set(
                 RbacPermissions.ORGANIZATIONS_READ, RbacPermissions.USERS_READ),
-                merge(chainRead, merge(fileTypesRead, filesRead)))));
+                merge(chainRead, merge(fileTypesRead, filesRead))))));
         return matrix;
     }
 
@@ -260,7 +262,8 @@ public class RbacDataInitializer implements CommandLineRunner {
                 RbacPermissions.ALERT_RULES_UPDATE, RbacPermissions.ALERT_RULES_DELETE,
                 RbacPermissions.BUSINESS_CALENDAR_READ, RbacPermissions.BUSINESS_CALENDAR_CREATE,
                 RbacPermissions.BUSINESS_CALENDAR_UPDATE, RbacPermissions.BUSINESS_CALENDAR_DELETE,
-                RbacPermissions.DASHBOARD_READ, RbacPermissions.DASHBOARD_EXPORT));
+                RbacPermissions.DASHBOARD_READ, RbacPermissions.DASHBOARD_EXPORT,
+                RbacPermissions.ASSISTANT_USE));
     }
 
     private Set<String> set(String... values) {

@@ -68,6 +68,21 @@ public class UserService {
             UserRole role,
             String search,
             Pageable pageable) {
+        return search(actor, organizationId, null, role, search, pageable);
+    }
+
+    /**
+     * @param organizationIdsFilter si non null/vide : restreint à ces orgs (ex. org + descendants),
+     *                              après intersection avec le périmètre RBAC.
+     */
+    @Transactional(readOnly = true)
+    public Page<UserResponse> search(
+            SecurityUser actor,
+            UUID organizationId,
+            java.util.Collection<UUID> organizationIdsFilter,
+            UserRole role,
+            String search,
+            Pageable pageable) {
         if (!accessControlService.canReadUsers(actor)) {
             throw new TranslatableAccessDeniedException("ACCESS_DENIED", "Access denied");
         }
@@ -82,12 +97,58 @@ public class UserService {
                     "ACCESS_DENIED_ORGANIZATION", "Access denied to this organization");
         }
 
+        boolean restrictToOrgs = organizationIdsFilter != null && !organizationIdsFilter.isEmpty();
+        java.util.Set<UUID> restrictOrgIds;
+        if (restrictToOrgs) {
+            restrictOrgIds = new java.util.HashSet<>(organizationIdsFilter);
+            if (!scope.allOrganizations()) {
+                restrictOrgIds.retainAll(scope.organizationIds());
+            }
+            if (restrictOrgIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+        } else {
+            // placeholder pour éviter IN () vide côté SQL
+            restrictOrgIds = java.util.Set.of(java.util.UUID.randomUUID());
+        }
+
+        // Chaînes jamais null : Postgres + Hibernate sinon lient en bytea → LOWER(bytea) échoue
+        String normalizedSearch = search == null || search.isBlank() ? "" : search.trim();
+        String token1 = "";
+        String token2 = "";
+        if (!normalizedSearch.isEmpty()) {
+            String[] parts = normalizedSearch.split("\\s+");
+            if (parts.length >= 1 && !parts[0].isBlank()) {
+                token1 = parts[0];
+            }
+            if (parts.length >= 2 && !parts[parts.length - 1].isBlank()) {
+                token2 = parts[parts.length - 1];
+                if (token2.equalsIgnoreCase(token1)) {
+                    token2 = "";
+                }
+            }
+        }
+
+        UUID orgIdParam = organizationId != null ? organizationId : java.util.UUID.randomUUID();
+        UserRole roleParam = role != null ? role : UserRole.AGENT;
+
         return userRepository.search(
                         scope.allOrganizations(),
-                        scope.organizationIds(),
-                        organizationId,
-                        role,
-                        search,
+                        scope.organizationIds().isEmpty()
+                                ? java.util.Set.of(java.util.UUID.randomUUID())
+                                : scope.organizationIds(),
+                        organizationId != null,
+                        orgIdParam,
+                        restrictToOrgs,
+                        restrictOrgIds,
+                        role != null,
+                        roleParam,
+                        normalizedSearch.isEmpty(),
+                        normalizedSearch,
+                        !token1.isEmpty(),
+                        token1,
+                        !token2.isEmpty(),
+                        token2,
                         pageable)
                 .map(DtoMapper::toResponse);
     }

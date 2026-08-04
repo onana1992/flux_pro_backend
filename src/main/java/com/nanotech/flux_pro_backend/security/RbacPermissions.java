@@ -73,4 +73,7 @@ public final class RbacPermissions {
 
     public static final String DASHBOARD_READ = "DASHBOARD:READ";
     public static final String DASHBOARD_EXPORT = "DASHBOARD:EXPORT";
+
+    /** Assistant conversationnel lecture seule (Sprint 0+). */
+    public static final String ASSISTANT_USE = "ASSISTANT:USE";
 }
