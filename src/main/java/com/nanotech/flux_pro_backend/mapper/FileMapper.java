@@ -5,6 +5,7 @@ import com.nanotech.flux_pro_backend.dto.response.FileDetailResponse;
 import com.nanotech.flux_pro_backend.dto.response.FileSummaryResponse;
 import com.nanotech.flux_pro_backend.entity.FileAttachment;
 import com.nanotech.flux_pro_backend.entity.FileEntity;
+import com.nanotech.flux_pro_backend.entity.FilePassage;
 import com.nanotech.flux_pro_backend.entity.PortalUser;
 import com.nanotech.flux_pro_backend.entity.User;
 
@@ -17,6 +18,14 @@ public final class FileMapper {
     }
 
     public static FileSummaryResponse toSummary(FileEntity file) {
+        return toSummary(file, null);
+    }
+
+    public static FileSummaryResponse toSummary(FileEntity file, FilePassage activeMinePassage) {
+        String myPassageLabel = null;
+        if (activeMinePassage != null && activeMinePassage.getChainStepTemplate() != null) {
+            myPassageLabel = activeMinePassage.getChainStepTemplate().getLabel();
+        }
         return new FileSummaryResponse(
                 file.getId(),
                 file.getReferenceNumber(),
@@ -28,7 +37,10 @@ public final class FileMapper {
                 file.getOrganization() != null ? file.getOrganization().getCode() : null,
                 file.getOrganization() != null ? file.getOrganization().getName() : null,
                 file.getChainTemplate() != null ? file.getChainTemplate().getCode() : null,
-                file.getCreatedAt());
+                file.getCreatedAt(),
+                activeMinePassage != null,
+                myPassageLabel,
+                activeMinePassage != null ? activeMinePassage.getDueAt() : null);
     }
 
     public static FileDetailResponse toDetail(FileEntity file, List<FileAttachment> attachments) {

@@ -10,6 +10,7 @@ import com.nanotech.flux_pro_backend.dto.response.FileSummaryResponse;
 import com.nanotech.flux_pro_backend.entity.ChainTemplate;
 import com.nanotech.flux_pro_backend.entity.FileEntity;
 import com.nanotech.flux_pro_backend.entity.FileNumberSequence;
+import com.nanotech.flux_pro_backend.entity.FilePassage;
 import com.nanotech.flux_pro_backend.entity.FileType;
 import com.nanotech.flux_pro_backend.entity.Organization;
 import com.nanotech.flux_pro_backend.entity.User;
@@ -20,6 +21,7 @@ import com.nanotech.flux_pro_backend.mapper.FileMapper;
 import com.nanotech.flux_pro_backend.repository.ChainTemplateRepository;
 import com.nanotech.flux_pro_backend.repository.FileAttachmentRepository;
 import com.nanotech.flux_pro_backend.repository.FileNumberSequenceRepository;
+import com.nanotech.flux_pro_backend.repository.FilePassageRepository;
 import com.nanotech.flux_pro_backend.repository.FileRepository;
 import com.nanotech.flux_pro_backend.repository.FileTypeRepository;
 import com.nanotech.flux_pro_backend.repository.OrganizationRepository;
@@ -34,6 +36,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -45,6 +50,7 @@ public class FileService {
 
     private final FileRepository fileRepository;
     private final FileAttachmentRepository fileAttachmentRepository;
+    private final FilePassageRepository filePassageRepository;
     private final FileNumberSequenceRepository fileNumberSequenceRepository;
     private final FileTypeRepository fileTypeRepository;
     private final ChainTemplateRepository chainTemplateRepository;
@@ -64,21 +70,34 @@ public class FileService {
             FilePriority priority,
             LocalDate receivedFrom,
             LocalDate receivedTo,
+            Boolean awaitingMyAction,
             Pageable pageable,
             SecurityUser actor) {
         boolean allAccessible = organizationScopeService.hasGlobalScope(actor);
-        return fileRepository.search(
-                        allAccessible,
-                        actor.getId(),
-                        organizationId,
-                        fileTypeCode,
-                        status,
-                        priority,
-                        receivedFrom,
-                        receivedTo,
-                        search,
-                        pageable)
-                .map(FileMapper::toSummary);
+        boolean onlyAwaiting = Boolean.TRUE.equals(awaitingMyAction);
+        Page<FileEntity> page = fileRepository.search(
+                allAccessible,
+                actor.getId(),
+                organizationId,
+                fileTypeCode,
+                status,
+                priority,
+                receivedFrom,
+                receivedTo,
+                search,
+                onlyAwaiting,
+                pageable);
+        if (page.isEmpty()) {
+            return page.map(FileMapper::toSummary);
+        }
+        List<UUID> fileIds = page.getContent().stream().map(FileEntity::getId).toList();
+        Map<UUID, FilePassage> activeMineByFile = new HashMap<>();
+        for (FilePassage passage : filePassageRepository.findActiveMineForFiles(actor.getId(), fileIds)) {
+            UUID fileId = passage.getFile().getId();
+            activeMineByFile.merge(fileId, passage, (a, b) ->
+                    a.getStepOrder() <= b.getStepOrder() ? a : b);
+        }
+        return page.map(file -> FileMapper.toSummary(file, activeMineByFile.get(file.getId())));
     }
 
     @Transactional(readOnly = true)

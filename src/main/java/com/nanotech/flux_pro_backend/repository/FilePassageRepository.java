@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -145,22 +146,51 @@ public interface FilePassageRepository extends JpaRepository<FilePassage, UUID> 
             @Param("orgIds") Set<UUID> orgIds,
             @Param("organizationId") UUID organizationId);
 
-    /** Widget « Mon activité » (DSH-01) : maillons actifs dont l'utilisateur est responsable ou suppléant. */
+    /**
+     * Widget « Mon activité » (DSH-01) : maillons actifs dont l'utilisateur est responsable ou suppléant.
+     * Le critère suppléant est isolé en sous-requête {@code IN} pour éviter un INNER JOIN Hibernate
+     * sur {@code substitute} qui masquerait les responsables sans intérimaire.
+     */
     @Query("""
             SELECT p FROM FilePassage p
             JOIN FETCH p.file f
             JOIN FETCH p.chainStepTemplate
             WHERE (
                     p.responsibleUser.id = :userId
-                    OR (
-                        p.responsibleUser.substitute.id = :userId
-                        AND p.responsibleUser.substitute.active = true
+                    OR p.responsibleUser.id IN (
+                        SELECT u.id FROM User u
+                        WHERE u.substitute.id = :userId
+                          AND u.substitute.active = true
                     )
                   )
               AND p.status = com.nanotech.flux_pro_backend.enumeration.PassageStatus.IN_PROGRESS
               AND f.status = com.nanotech.flux_pro_backend.enumeration.FileStatus.IN_PROGRESS
             """)
     List<FilePassage> findActiveByResponsibleUser(@Param("userId") UUID userId);
+
+    /**
+     * Enrichissement liste /files : maillons IN_PROGRESS de l'appelant parmi une page de dossiers.
+     * Sous-requête {@code IN} pour le critère suppléant (éviter INNER JOIN Hibernate sur substitute).
+     */
+    @Query("""
+            SELECT p FROM FilePassage p
+            JOIN FETCH p.chainStepTemplate
+            JOIN FETCH p.file
+            WHERE p.file.id IN :fileIds
+              AND p.status = com.nanotech.flux_pro_backend.enumeration.PassageStatus.IN_PROGRESS
+              AND p.file.status = com.nanotech.flux_pro_backend.enumeration.FileStatus.IN_PROGRESS
+              AND (
+                    p.responsibleUser.id = :userId
+                    OR p.responsibleUser.id IN (
+                        SELECT u.id FROM User u
+                        WHERE u.substitute.id = :userId
+                          AND u.substitute.active = true
+                    )
+                  )
+            """)
+    List<FilePassage> findActiveMineForFiles(
+            @Param("userId") UUID userId,
+            @Param("fileIds") Collection<UUID> fileIds);
 
     /** Widget « Mon activité » (DSH-01) : mes transmissions récentes (maillons que j'ai quittés). */
     @Query("""

@@ -91,7 +91,7 @@ class AssistantSessionToolsTest {
         String json = tools.searchFiles(null, null, null, null, null, null, null, null);
 
         assertThat(json).contains("PERMISSION_DENIED");
-        verify(fileService, never()).findAll(any(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(fileService, never()).findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test

@@ -183,6 +183,7 @@ public class AssistantSessionTools {
                     parseEnum(FilePriority.class, priority),
                     parseDate(receivedFrom),
                     parseDate(receivedTo),
+                    null,
                     PageRequest.of(pageIdx, MAX_LIST),
                     actor);
             List<Map<String, Object>> items = new ArrayList<>();
@@ -767,6 +768,8 @@ public class AssistantSessionTools {
         m.put("fileTypeCode", f.fileTypeCode());
         m.put("organizationCode", f.organizationCode());
         m.put("receivedAt", f.receivedAt());
+        m.put("awaitingMyAction", f.awaitingMyAction());
+        m.put("myPassageLabel", f.myPassageLabel());
         m.put("uiPath", "/files/" + f.id());
         return m;
     }
