@@ -157,14 +157,18 @@ public class UserService {
     public UserProfileResponse getMeProfile(SecurityUser user) {
         User entity = userRepository.findByIdWithRolesAndOrganization(user.getId())
                 .orElseThrow(() -> AppException.notFound("USER_NOT_FOUND", "User not found"));
-        return DtoMapper.toProfile(entity, rbacAuthorityService.resolve(entity));
+        return DtoMapper.toProfile(
+                entity,
+                rbacAuthorityService.resolve(entity),
+                substituteService.findCoveredUserIds(entity.getId()));
     }
 
     @Transactional(readOnly = true)
     public UserResponse getById(SecurityUser actor, UUID id) {
         User user = findOrThrowWithOrg(id);
         accessControlService.assertCanReadUser(actor, user);
-        return DtoMapper.toResponse(user);
+        List<User> covered = userRepository.findActiveBySubstituteId(user.getId());
+        return DtoMapper.toResponse(user, covered);
     }
 
     @Transactional

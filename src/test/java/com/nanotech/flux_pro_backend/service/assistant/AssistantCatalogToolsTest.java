@@ -105,7 +105,7 @@ class AssistantCatalogToolsTest {
                 UUID.randomUUID(), "MAT-9", "a@mintp.cm", "Nguema", "Paul", null,
                 UserRole.AGENT,
                 new OrganizationSummaryResponse(childId, "DAG-RH", "RH"),
-                null, true, false, null, null, false, List.of());
+                null, true, false, null, null, false, List.of(), List.of());
         when(userService.search(any(), isNull(), eq(Set.of(dagId, childId)), isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(user)));
 

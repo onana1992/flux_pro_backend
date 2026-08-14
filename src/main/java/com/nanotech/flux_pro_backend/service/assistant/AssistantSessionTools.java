@@ -258,6 +258,7 @@ public class AssistantSessionTools {
                 m.put("sizeBytes", a.sizeBytes());
                 m.put("kind", a.kind());
                 m.put("passageLabel", a.passageLabel());
+                m.put("passageResponsibleName", a.passageResponsibleName());
                 m.put("uploadedByName", a.uploadedByName());
                 m.put("createdAt", a.createdAt());
                 return m;

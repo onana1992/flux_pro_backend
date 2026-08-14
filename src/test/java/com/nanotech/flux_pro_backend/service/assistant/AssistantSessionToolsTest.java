@@ -67,7 +67,8 @@ class AssistantSessionToolsTest {
                 null,
                 false,
                 List.of("AGENT"),
-                List.of(RbacPermissions.FILES_READ)));
+                List.of(RbacPermissions.FILES_READ),
+                List.of()));
 
         String json = tools.getCurrentUser();
 
@@ -105,6 +106,7 @@ class AssistantSessionToolsTest {
                 null,
                 false,
                 List.of("AGENT"),
+                List.of(),
                 List.of()));
 
         tools.getCurrentUser();

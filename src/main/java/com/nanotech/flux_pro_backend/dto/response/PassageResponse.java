@@ -38,6 +38,8 @@ public record PassageResponse(
         String returnReason,
         Instant suspendedAt,
         Instant resumedAt,
-        List<PassageCcUserResponse> ccUsers
+        List<PassageCcUserResponse> ccUsers,
+        /** True si l'utilisateur courant peut agir (responsable, suppléant, ou admin métier). */
+        boolean canAct
 ) {
 }

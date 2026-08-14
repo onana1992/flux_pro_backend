@@ -153,13 +153,29 @@ public final class FileMapper {
         UUID passageId = null;
         String passageLabel = null;
         Integer passageStepOrder = null;
+        UUID passageResponsibleId = null;
+        String passageResponsibleName = null;
         if (attachment.getPassage() != null) {
             passageId = attachment.getPassage().getId();
             passageStepOrder = attachment.getPassage().getStepOrder();
             if (attachment.getPassage().getChainStepTemplate() != null) {
                 passageLabel = attachment.getPassage().getChainStepTemplate().getLabel();
             }
+            if (attachment.getPassage().getResponsibleUser() != null) {
+                var responsible = attachment.getPassage().getResponsibleUser();
+                passageResponsibleId = responsible.getId();
+                passageResponsibleName = responsible.getFirstName() + " " + responsible.getLastName();
+            }
         }
+        // Affichage métier des pièces maillon : privilégier le responsable du maillon.
+        String displayName = kind == com.nanotech.flux_pro_backend.enumeration.AttachmentKind.PASSAGE
+                && passageResponsibleName != null
+                ? passageResponsibleName
+                : uploaderName;
+        UUID displayUserId = kind == com.nanotech.flux_pro_backend.enumeration.AttachmentKind.PASSAGE
+                && passageResponsibleId != null
+                ? passageResponsibleId
+                : uploadedById;
         return new FileAttachmentResponse(
                 attachment.getId(),
                 attachment.getOriginalFilename(),
@@ -170,9 +186,11 @@ public final class FileMapper {
                 passageId,
                 passageLabel,
                 passageStepOrder,
+                passageResponsibleId,
+                passageResponsibleName,
                 attachment.isPortalVisible(),
-                uploadedById,
-                uploaderName,
+                displayUserId,
+                displayName,
                 attachment.getCreatedAt());
     }
 }

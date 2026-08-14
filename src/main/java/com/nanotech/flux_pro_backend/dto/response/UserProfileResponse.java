@@ -14,5 +14,7 @@ public record UserProfileResponse(
         OrganizationSummaryResponse organization,
         boolean mustChangePassword,
         List<String> roles,
-        List<String> permissions) {
+        List<String> permissions,
+        /** Utilisateurs actifs dont le compte courant est le suppléant (intérim). */
+        List<UUID> coveredUserIds) {
 }

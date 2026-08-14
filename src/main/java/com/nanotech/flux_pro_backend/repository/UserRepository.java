@@ -82,6 +82,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     List<UUID> findActiveUserIdsBySubstituteId(@Param("substituteId") UUID substituteId);
 
+    @Query("""
+            SELECT u FROM User u
+            JOIN FETCH u.organization
+            WHERE u.substitute.id = :substituteId
+              AND u.active = true
+            ORDER BY u.lastName ASC, u.firstName ASC
+            """)
+    List<User> findActiveBySubstituteId(@Param("substituteId") UUID substituteId);
+
     /**
      * Filtres texte via flags booléens + chaînes non-null — évite {@code LOWER(bytea)}
      * côté PostgreSQL quand Hibernate lie un {@code String} null en bytea.

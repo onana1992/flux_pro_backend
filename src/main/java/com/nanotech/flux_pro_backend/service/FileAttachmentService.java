@@ -72,8 +72,13 @@ public class FileAttachmentService {
 
         validateFile(multipart);
 
-        User uploader = userRepository.findById(actor.getId())
+        User actorUser = userRepository.findById(actor.getId())
                 .orElseThrow(() -> FileException.notFound("FILE_USER_NOT_FOUND", "User not found"));
+        // Pièce de maillon : attribution métier = responsable du maillon (titulaire),
+        // même si un suppléant / admin exécute l'upload.
+        User uploader = effectiveKind == AttachmentKind.PASSAGE && passage != null && passage.getResponsibleUser() != null
+                ? passage.getResponsibleUser()
+                : actorUser;
 
         String storageKey;
         try {

@@ -15,6 +15,7 @@ public interface FileAttachmentRepository extends JpaRepository<FileAttachment, 
             SELECT a FROM FileAttachment a
             LEFT JOIN FETCH a.passage p
             LEFT JOIN FETCH p.chainStepTemplate
+            LEFT JOIN FETCH p.responsibleUser
             LEFT JOIN FETCH a.uploadedBy
             LEFT JOIN FETCH a.uploadedByPortalUser
             WHERE a.file.id = :fileId

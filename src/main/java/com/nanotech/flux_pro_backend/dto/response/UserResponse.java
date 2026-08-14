@@ -20,5 +20,7 @@ public record UserResponse(
         UUID substituteId,
         String substituteDisplayName,
         boolean mustChangePassword,
-        List<RoleSummaryResponse> roles) {
+        List<RoleSummaryResponse> roles,
+        /** Titulaires actifs dont cet utilisateur est le suppléant. */
+        List<UserLiteResponse> coveredTitulars) {
 }
