@@ -43,6 +43,10 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
      * Liste /files : rôles à scope global voient tout ({@code allAccessible=true}) ;
      * sinon dossiers où l'utilisateur est responsable d'un maillon, ou qu'il a créés (brouillons).
      * Pas de filtre par périmètre organisationnel du dossier.
+     * <p>
+     * Les conditions « responsable » et « suppléant » sont en EXISTS séparés : un seul EXISTS
+     * avec {@code responsibleUser.substitute} forcerait un INNER JOIN Hibernate et exclurait
+     * les maillons dont le responsable n'a pas de suppléant.
      */
     @Query("""
             SELECT f FROM FileEntity f
@@ -51,13 +55,16 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
                     OR f.createdBy.id = :userId
                     OR EXISTS (
                         SELECT 1 FROM FilePassage p
-                        WHERE p.file = f AND (
-                            p.responsibleUser.id = :userId
-                            OR (
-                                p.responsibleUser.substitute.id = :userId
-                                AND p.responsibleUser.substitute.active = true
-                            )
-                        )
+                        WHERE p.file = f AND p.responsibleUser.id = :userId
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM FilePassage p
+                        WHERE p.file = f
+                          AND p.responsibleUser.id IN (
+                              SELECT u.id FROM User u
+                              WHERE u.substitute.id = :userId
+                                AND u.substitute.active = true
+                          )
                     )
                   )
               AND (:organizationId IS NULL OR f.organization.id = :organizationId)
@@ -70,6 +77,30 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
                    OR LOWER(f.referenceNumber) LIKE LOWER(CONCAT('%', :search, '%'))
                    OR LOWER(f.subject) LIKE LOWER(CONCAT('%', :search, '%'))
                    OR LOWER(f.senderOrBeneficiary) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (
+                    :awaitingMyAction = false
+                    OR (
+                        f.status = com.nanotech.flux_pro_backend.enumeration.FileStatus.IN_PROGRESS
+                        AND (
+                            EXISTS (
+                                SELECT 1 FROM FilePassage p
+                                WHERE p.file = f
+                                  AND p.status = com.nanotech.flux_pro_backend.enumeration.PassageStatus.IN_PROGRESS
+                                  AND p.responsibleUser.id = :userId
+                            )
+                            OR EXISTS (
+                                SELECT 1 FROM FilePassage p
+                                WHERE p.file = f
+                                  AND p.status = com.nanotech.flux_pro_backend.enumeration.PassageStatus.IN_PROGRESS
+                                  AND p.responsibleUser.id IN (
+                                      SELECT u.id FROM User u
+                                      WHERE u.substitute.id = :userId
+                                        AND u.substitute.active = true
+                                  )
+                            )
+                        )
+                    )
+                  )
             """)
     Page<FileEntity> search(
             @Param("allAccessible") boolean allAccessible,
@@ -81,6 +112,7 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
             @Param("receivedFrom") LocalDate receivedFrom,
             @Param("receivedTo") LocalDate receivedTo,
             @Param("search") String search,
+            @Param("awaitingMyAction") boolean awaitingMyAction,
             Pageable pageable);
 
     boolean existsByChainTemplateIdAndStatus(UUID chainTemplateId, com.nanotech.flux_pro_backend.enumeration.FileStatus status);

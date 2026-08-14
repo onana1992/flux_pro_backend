@@ -14,6 +14,7 @@ import com.nanotech.flux_pro_backend.service.PassageStageHelper;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Predicate;
 
 public final class PassageMapper {
 
@@ -22,6 +23,15 @@ public final class PassageMapper {
 
     public static FilePassageCircuitResponse toCircuit(
             FileEntity file, List<FilePassage> passages, DelaiService delaiService, Instant now) {
+        return toCircuit(file, passages, delaiService, now, p -> false);
+    }
+
+    public static FilePassageCircuitResponse toCircuit(
+            FileEntity file,
+            List<FilePassage> passages,
+            DelaiService delaiService,
+            Instant now,
+            Predicate<FilePassage> canAct) {
         List<FilePassage> active = PassageStageHelper.activePassages(passages);
         Integer currentStage = active.stream()
                 .map(FilePassage::getStepOrder)
@@ -30,6 +40,7 @@ public final class PassageMapper {
         List<CurrentHolderResponse> currentHolders = active.stream()
                 .map(p -> toCurrentHolder(p, delaiService, now))
                 .toList();
+        Predicate<FilePassage> act = canAct != null ? canAct : p -> false;
 
         return new FilePassageCircuitResponse(
                 file.getChainTemplate() != null ? file.getChainTemplate().getCode() : null,
@@ -37,10 +48,15 @@ public final class PassageMapper {
                 currentStage,
                 currentHolders.isEmpty() ? null : currentHolders.get(0),
                 currentHolders,
-                passages.stream().map(p -> toPassage(p, delaiService, now)).toList());
+                passages.stream().map(p -> toPassage(p, delaiService, now, act.test(p))).toList());
     }
 
     public static PassageResponse toPassage(FilePassage passage, DelaiService delaiService, Instant now) {
+        return toPassage(passage, delaiService, now, false);
+    }
+
+    public static PassageResponse toPassage(
+            FilePassage passage, DelaiService delaiService, Instant now, boolean canAct) {
         ChainStepTemplate step = passage.getChainStepTemplate();
         User responsible = passage.getResponsibleUser();
         String responsibleName = responsible != null
@@ -91,7 +107,8 @@ public final class PassageMapper {
                 passage.getReturnReason(),
                 passage.getSuspendedAt(),
                 passage.getResumedAt(),
-                toCcUsers(passage));
+                toCcUsers(passage),
+                canAct);
     }
 
     private static List<PassageCcUserResponse> toCcUsers(FilePassage passage) {

@@ -66,10 +66,11 @@ public class FileController {
             @RequestParam(required = false) FilePriority priority,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate receivedFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate receivedTo,
+            @RequestParam(required = false) Boolean awaitingMyAction,
             @PageableDefault(size = 20, sort = "receivedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return fileService.findAll(
                 search, organizationId, fileTypeCode, status, priority,
-                receivedFrom, receivedTo, pageable, securityUtils.currentUser());
+                receivedFrom, receivedTo, awaitingMyAction, pageable, securityUtils.currentUser());
     }
 
     @GetMapping("/{id}")

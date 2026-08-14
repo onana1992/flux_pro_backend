@@ -18,6 +18,12 @@ public record FileSummaryResponse(
         String organizationCode,
         String organizationName,
         String chainTemplateCode,
-        Instant createdAt
+        Instant createdAt,
+        /** True si un maillon IN_PROGRESS est affecté à l'appelant (ou son intérim). */
+        boolean awaitingMyAction,
+        /** Libellé du maillon actif de l'appelant, si {@code awaitingMyAction}. */
+        String myPassageLabel,
+        /** Échéance du maillon actif de l'appelant, si connue. */
+        Instant myPassageDueAt
 ) {
 }

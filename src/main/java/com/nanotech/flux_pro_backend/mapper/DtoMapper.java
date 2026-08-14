@@ -7,6 +7,7 @@ import com.nanotech.flux_pro_backend.dto.response.OrganizationTypeResponse;
 import com.nanotech.flux_pro_backend.dto.response.PermissionResponse;
 import com.nanotech.flux_pro_backend.dto.response.RoleResponse;
 import com.nanotech.flux_pro_backend.dto.response.RoleSummaryResponse;
+import com.nanotech.flux_pro_backend.dto.response.UserLiteResponse;
 import com.nanotech.flux_pro_backend.dto.response.UserProfileResponse;
 import com.nanotech.flux_pro_backend.dto.response.UserResponse;
 import com.nanotech.flux_pro_backend.entity.Organization;
@@ -61,6 +62,11 @@ public final class DtoMapper {
     }
 
     public static UserProfileResponse toProfile(User user, RbacAuthorityService.RbacAuthorities authorities) {
+        return toProfile(user, authorities, List.of());
+    }
+
+    public static UserProfileResponse toProfile(
+            User user, RbacAuthorityService.RbacAuthorities authorities, List<UUID> coveredUserIds) {
         return new UserProfileResponse(
                 user.getId(),
                 user.getEmail(),
@@ -70,7 +76,8 @@ public final class DtoMapper {
                 toSummary(user.getOrganization()),
                 user.isMustChangePassword(),
                 authorities.roleNames(),
-                authorities.permissionNames());
+                authorities.permissionNames(),
+                coveredUserIds != null ? coveredUserIds : List.of());
     }
 
     public static UserProfileResponse toProfile(User user) {
@@ -83,16 +90,24 @@ public final class DtoMapper {
                 toSummary(user.getOrganization()),
                 user.isMustChangePassword(),
                 List.of(user.getRole().name()),
+                List.of(),
                 List.of());
     }
 
     public static UserResponse toResponse(User user) {
+        return toResponse(user, List.of());
+    }
+
+    public static UserResponse toResponse(User user, List<User> coveredTitulars) {
         List<RoleSummaryResponse> roles = user.getRoles() == null
                 ? List.of()
                 : user.getRoles().stream()
                         .map(r -> new RoleSummaryResponse(r.getId(), r.getName()))
                         .toList();
         User substitute = user.getSubstitute();
+        List<UserLiteResponse> covered = coveredTitulars == null
+                ? List.of()
+                : coveredTitulars.stream().map(DtoMapper::toLite).toList();
         return new UserResponse(
                 user.getId(),
                 user.getStaffNumber(),
@@ -110,7 +125,21 @@ public final class DtoMapper {
                         ? substitute.getLastName() + " " + substitute.getFirstName()
                         : null,
                 user.isMustChangePassword(),
-                roles);
+                roles,
+                covered);
+    }
+
+    public static UserLiteResponse toLite(User user) {
+        return new UserLiteResponse(
+                user.getId(),
+                user.getStaffNumber(),
+                user.getEmail(),
+                user.getLastName(),
+                user.getFirstName(),
+                user.getRole(),
+                user.getOrganization() != null ? user.getOrganization().getCode() : null,
+                user.getOrganization() != null ? user.getOrganization().getName() : null,
+                user.isActive());
     }
 
     public static PermissionResponse toPermissionResponse(Permission permission) {

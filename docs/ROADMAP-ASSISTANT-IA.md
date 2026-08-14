@@ -5,7 +5,7 @@
 **Livrable :** Assistant IA **lecture seule**, conversationnel, multi-domaines  
 **Date :** 29 juillet 2026  
 **Statut :** Roadmap d’implémentation (à valider avant développement)  
-**Références :** [CDC](./CAHIER-DES-CHARGES-CHAINEFLUX-MINTP%20(1).md), [SPEC-DOS](./SPEC-DOS.md), [SPEC-CHN](./SPEC-CHN.md), [SPEC-ALR](./SPEC-ALR.md), [SPEC-DSH](./SPEC-DSH.md), [SPEC-USR-RBAC](./SPEC-USR-RBAC.md), [SPEC-ORG](./SPEC-ORG.md)
+**Références :** [SPEC fonctionnelle Assistant](./SPEC-ASSISTANT.md), [CDC](./CAHIER-DES-CHARGES-CHAINEFLUX-MINTP%20(1).md), [SPEC-DOS](./SPEC-DOS.md), [SPEC-CHN](./SPEC-CHN.md), [SPEC-ALR](./SPEC-ALR.md), [SPEC-DSH](./SPEC-DSH.md), [SPEC-USR-RBAC](./SPEC-USR-RBAC.md), [SPEC-ORG](./SPEC-ORG.md)
 
 ---
 
@@ -302,13 +302,13 @@ Sem.  1────2────3────4────5────6──�
 - Smoke : `get_current_user` + `get_file_by_reference` + réponse FR
 
 **Livrables**
-- [ ] ADR : choix LLM / Spring AI / streaming
-- [ ] `docs/sql/YYYY-MM-DD_assistant_permission_and_tables.sql` (permission + tables conversation)
-- [ ] Endpoint `POST /api/assistant/chat` (sync)
-- [ ] Tables `assistant_conversation`, `assistant_message`, `assistant_tool_call` (schéma §7)
-- [ ] Composant front `AssistantChatPanel` + i18n FR
-- [ ] Feature flag `fluxpro.assistant.enabled=true|false`
-- [ ] Variables d’env documentées (Render / local)
+- [x] ADR : choix LLM / Spring AI / streaming → `docs/ADR-ASSISTANT-LLM-SPRING-AI.md` (OpenAI + Spring AI 2.0, sync S0)
+- [x] `docs/sql/2026-08-03_assistant_permission_and_tables.sql` (permission + tables conversation)
+- [x] Endpoint `POST /api/assistant/chat` (sync) + `GET /api/assistant/status`
+- [x] Tables `assistant_conversation`, `assistant_message`, `assistant_tool_call` (schéma §7)
+- [x] Composant front `AssistantChatPanel` + i18n FR/EN
+- [x] Feature flag `fluxpro.assistant.enabled=true|false`
+- [x] Variables d’env documentées (Render / local)
 
 **Critères d’acceptation**
 - Un utilisateur connecté pose « Qui suis-je ? » → réponse avec nom, rôle, org
@@ -339,11 +339,20 @@ Sem.  1────2────3────4────5────6──�
 7. Quelles pièces sont liées au dossier X ? (noms/types seulement)
 
 **Livrables**
-- [ ] Tool registry P0 + tests unitaires (mock services)
-- [ ] Prompt versionné `docs/assistant/system-prompt.md`
-- [ ] Limite résultats (ex. max 10 dossiers listés dans la réponse)
-- [ ] Citations cliquables front
-- [ ] Rate limit : N messages / utilisateur / heure
+- [x] Tool registry P0 + tests unitaires (tools mock + rate limit)
+- [x] Prompt versionné `docs/assistant/system-prompt.md`
+- [x] Limite résultats (ex. max 10 dossiers listés dans la réponse)
+- [x] Citations cliquables front
+- [x] Rate limit : N messages / utilisateur / heure
+
+**Notes S1 (implémenté)**
+- Tools : `get_current_user`, `search_files`, `get_file_by_reference`, `get_file_by_id`,
+  `list_file_attachments`, `list_passages`, `get_current_passage`, `list_file_alerts`,
+  `list_my_notifications`, `get_my_activity`, `get_overdue_files`, `get_dashboard_summary`
+- Limite tool-calls / tour : `fluxpro.assistant.max-tool-calls` (défaut 5)
+- Rate limit : `fluxpro.assistant.rate-limit-per-hour` (défaut 30)
+- Banque eval : `docs/assistant/eval-bank-p0.md`
+- Front : suggestions agent vs manager + citations « Sources »
 
 **Critères d’acceptation**
 - ≥ 80 % des 20 questions de banque P0 correctement grounded (eval manuelle)
@@ -370,10 +379,15 @@ Sem.  1────2────3────4────5────6──�
 7. Quelles alertes sur le dossier X ?
 
 **Livrables**
-- [ ] Tools DSH P1
-- [ ] Format de réponse « tableau textuel » pour classements
-- [ ] Export conversation → lien vers `/rapports` ou `/dashboard/overdue`
+- [x] Tools DSH P1
+- [x] Format de réponse « tableau textuel » pour classements
+- [x] Export conversation → lien vers `/rapports` ou `/dashboard/overdue`
 - [ ] Métriques : latence p50/p95, taux d’erreur tools, tokens
+
+**Notes S2 (implémenté)**
+- Tools : `get_workload`, `get_delay_by_type`, `get_compliance_ranking`, `get_dashboard_analytics`
+- Réponses avec `tableMarkdown` + citations `/dashboard/*`, `/rapports`
+- Streaming SSE et métriques tokens reportés au Sprint 4 / ops
 
 **Critères d’acceptation**
 - Un directeur obtient UC-04 CDC en langage naturel (actifs, retards, délai moyen, top retards)
@@ -399,10 +413,17 @@ Sem.  1────2────3────4────5────6──�
 7. Pourquoi je n’ai pas accès aux templates ? (explication permission)
 
 **Livrables**
-- [ ] `docs/assistant/help-kb.md` (FR, aligné UI réelle)
-- [ ] Tool `lookup_help` (recherche sections / embeddings légers)
-- [ ] Matrice intent → écran cible
-- [ ] Tests : admin métier vs agent (tools admin refusés proprement)
+- [x] `docs/assistant/help-kb.md` (FR, aligné UI réelle)
+- [x] Tool `lookup_help` (recherche sections / embeddings légers)
+- [x] Matrice intent → écran cible
+- [x] Tests : admin métier vs agent (tools admin refusés proprement)
+
+**Notes S3 (implémenté)**
+- Tools E/F/G : org tree/detail/code/children/my-org, users search/detail/org-users/heads,
+  file types, chain templates, alert types/rules, business calendar, preconfigured, `lookup_help`
+- Matrice : `docs/assistant/intent-matrix.md`
+- Refus action → guide `lookup_help` ; mode how-to dans l'orchestrateur
+- Classe `AssistantCatalogTools` + `AssistantHelpKnowledgeBase`
 
 **Critères d’acceptation**
 - Questions « comment faire » répondent avec étapes + lien, sans mutation

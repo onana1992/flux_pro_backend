@@ -85,6 +85,14 @@ public class OrganizationScopeService {
         return scope.contains(targetOrgId) || isSameBranch(userOrg, target);
     }
 
+    /** Organisation racine + tous ses descendants. */
+    @Transactional(readOnly = true)
+    public Set<UUID> collectSelfAndDescendants(UUID rootId) {
+        Set<UUID> ids = collectSubtree(rootId);
+        ids.add(rootId);
+        return ids;
+    }
+
     private boolean isSameBranch(Organization userOrg, Organization target) {
         Set<UUID> userAncestors = collectAncestors(userOrg);
         return userAncestors.contains(target.getId()) || collectAncestors(target).contains(userOrg.getId());

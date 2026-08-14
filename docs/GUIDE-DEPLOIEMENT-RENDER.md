@@ -180,6 +180,18 @@ Dans Render → **Environment**.
 | `FLUXPRO_REFERENCE_PREFIX` | `MINTP` |
 | `FLUXPRO_TENANT_BADGE` | `Déploiement pilote · MINTP Cameroun` |
 
+### Assistant IA (optionnel — Sprint 0+)
+
+| Variable | Exemple / notes |
+|----------|-----------------|
+| `FLUXPRO_ASSISTANT_ENABLED` | `true` pour activer le kill-switch applicatif |
+| `FLUXPRO_ASSISTANT_CHAT` | `openai` (ou `none` pour démarrer sans modèle) |
+| `OPENAI_API_KEY` | Clé API OpenAI (secret) |
+| `FLUXPRO_ASSISTANT_MODEL` | `gpt-4o-mini` (défaut) |
+| `FLUXPRO_ASSISTANT_TIMEOUT` | timeout secondes (défaut `60`) |
+
+Voir aussi `docs/ADR-ASSISTANT-LLM-SPRING-AI.md` et le script SQL `docs/sql/2026-08-03_assistant_permission_and_tables.sql`.
+
 ---
 
 ## 7. Sécurité

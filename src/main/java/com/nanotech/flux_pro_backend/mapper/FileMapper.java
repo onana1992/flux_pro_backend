@@ -5,6 +5,7 @@ import com.nanotech.flux_pro_backend.dto.response.FileDetailResponse;
 import com.nanotech.flux_pro_backend.dto.response.FileSummaryResponse;
 import com.nanotech.flux_pro_backend.entity.FileAttachment;
 import com.nanotech.flux_pro_backend.entity.FileEntity;
+import com.nanotech.flux_pro_backend.entity.FilePassage;
 import com.nanotech.flux_pro_backend.entity.PortalUser;
 import com.nanotech.flux_pro_backend.entity.User;
 
@@ -17,6 +18,14 @@ public final class FileMapper {
     }
 
     public static FileSummaryResponse toSummary(FileEntity file) {
+        return toSummary(file, null);
+    }
+
+    public static FileSummaryResponse toSummary(FileEntity file, FilePassage activeMinePassage) {
+        String myPassageLabel = null;
+        if (activeMinePassage != null && activeMinePassage.getChainStepTemplate() != null) {
+            myPassageLabel = activeMinePassage.getChainStepTemplate().getLabel();
+        }
         return new FileSummaryResponse(
                 file.getId(),
                 file.getReferenceNumber(),
@@ -28,7 +37,10 @@ public final class FileMapper {
                 file.getOrganization() != null ? file.getOrganization().getCode() : null,
                 file.getOrganization() != null ? file.getOrganization().getName() : null,
                 file.getChainTemplate() != null ? file.getChainTemplate().getCode() : null,
-                file.getCreatedAt());
+                file.getCreatedAt(),
+                activeMinePassage != null,
+                myPassageLabel,
+                activeMinePassage != null ? activeMinePassage.getDueAt() : null);
     }
 
     public static FileDetailResponse toDetail(FileEntity file, List<FileAttachment> attachments) {
@@ -141,13 +153,29 @@ public final class FileMapper {
         UUID passageId = null;
         String passageLabel = null;
         Integer passageStepOrder = null;
+        UUID passageResponsibleId = null;
+        String passageResponsibleName = null;
         if (attachment.getPassage() != null) {
             passageId = attachment.getPassage().getId();
             passageStepOrder = attachment.getPassage().getStepOrder();
             if (attachment.getPassage().getChainStepTemplate() != null) {
                 passageLabel = attachment.getPassage().getChainStepTemplate().getLabel();
             }
+            if (attachment.getPassage().getResponsibleUser() != null) {
+                var responsible = attachment.getPassage().getResponsibleUser();
+                passageResponsibleId = responsible.getId();
+                passageResponsibleName = responsible.getFirstName() + " " + responsible.getLastName();
+            }
         }
+        // Affichage métier des pièces maillon : privilégier le responsable du maillon.
+        String displayName = kind == com.nanotech.flux_pro_backend.enumeration.AttachmentKind.PASSAGE
+                && passageResponsibleName != null
+                ? passageResponsibleName
+                : uploaderName;
+        UUID displayUserId = kind == com.nanotech.flux_pro_backend.enumeration.AttachmentKind.PASSAGE
+                && passageResponsibleId != null
+                ? passageResponsibleId
+                : uploadedById;
         return new FileAttachmentResponse(
                 attachment.getId(),
                 attachment.getOriginalFilename(),
@@ -158,9 +186,11 @@ public final class FileMapper {
                 passageId,
                 passageLabel,
                 passageStepOrder,
+                passageResponsibleId,
+                passageResponsibleName,
                 attachment.isPortalVisible(),
-                uploadedById,
-                uploaderName,
+                displayUserId,
+                displayName,
                 attachment.getCreatedAt());
     }
 }

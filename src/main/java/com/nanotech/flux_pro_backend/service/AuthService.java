@@ -37,6 +37,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RbacAuthorityService rbacAuthorityService;
+    private final SubstituteService substituteService;
 
     @Transactional
     public TokenResponse login(String email, String password, HttpServletRequest request) {
@@ -165,7 +166,8 @@ public class AuthService {
         refreshToken.setExpiresAt(Instant.now().plusMillis(jwtTokenProvider.getRefreshExpirationMs()));
         refreshTokenRepository.save(refreshToken);
 
-        UserProfileResponse profile = DtoMapper.toProfile(loaded, authorities);
+        UserProfileResponse profile = DtoMapper.toProfile(
+                loaded, authorities, substituteService.findCoveredUserIds(loaded.getId()));
         return new TokenResponse(
                 accessToken,
                 refreshValue,

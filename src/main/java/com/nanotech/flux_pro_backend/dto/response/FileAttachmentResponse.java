@@ -16,6 +16,9 @@ public record FileAttachmentResponse(
         UUID passageId,
         String passageLabel,
         Integer passageStepOrder,
+        /** Responsable du maillon lié (source d'affichage pour les pièces PASSAGE). */
+        UUID passageResponsibleId,
+        String passageResponsibleName,
         boolean portalVisible,
         UUID uploadedById,
         String uploadedByName,
