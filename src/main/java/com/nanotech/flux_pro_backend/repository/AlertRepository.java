@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AlertRepository extends JpaRepository<Alert, UUID> {
@@ -17,6 +18,22 @@ public interface AlertRepository extends JpaRepository<Alert, UUID> {
     boolean existsByFilePassageIdAndAlertRuleIdAndChannel(UUID filePassageId, UUID alertRuleId, AlertChannel channel);
 
     boolean existsByAlertTypeId(UUID alertTypeId);
+
+    /**
+     * Charge une alerte avec les associations nécessaires à l'envoi email
+     * (évite LazyInitializationException hors session / thread async).
+     */
+    @Query("""
+            SELECT a FROM Alert a
+            JOIN FETCH a.recipient
+            JOIN FETCH a.alertType
+            LEFT JOIN FETCH a.file
+            LEFT JOIN FETCH a.filePassage fp
+            LEFT JOIN FETCH fp.chainStepTemplate
+            LEFT JOIN FETCH fp.responsibleUser
+            WHERE a.id = :id
+            """)
+    Optional<Alert> findByIdForDispatch(@Param("id") UUID id);
 
     @Query("""
             SELECT a FROM Alert a

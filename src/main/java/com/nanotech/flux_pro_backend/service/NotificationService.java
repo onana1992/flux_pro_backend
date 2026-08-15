@@ -5,8 +5,8 @@ import com.nanotech.flux_pro_backend.entity.Alert;
 import com.nanotech.flux_pro_backend.enumeration.AlertChannel;
 import com.nanotech.flux_pro_backend.enumeration.AlertStatus;
 import com.nanotech.flux_pro_backend.repository.AlertRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
@@ -22,13 +22,25 @@ import java.util.UUID;
  * Distribution multicanal (ALR-05) et accès aux notifications in-app de l'utilisateur courant.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
 
     private final AlertRepository alertRepository;
     private final EmailService emailService;
     private final ClockService clockService;
+    /** Proxy Spring — obligatoire pour que {@link #dispatchById} ouvre bien une transaction depuis {@link #dispatchEmailAsync}. */
+    private final NotificationService self;
+
+    public NotificationService(
+            AlertRepository alertRepository,
+            EmailService emailService,
+            ClockService clockService,
+            @Lazy NotificationService self) {
+        this.alertRepository = alertRepository;
+        this.emailService = emailService;
+        this.clockService = clockService;
+        this.self = self;
+    }
 
     public List<AlertChannel> activeChannels() {
         return List.of(AlertChannel.IN_APP, AlertChannel.EMAIL);
@@ -44,12 +56,12 @@ public class NotificationService {
         if (alert == null || alert.getId() == null) {
             return;
         }
-        dispatchById(alert.getId());
+        self.dispatchById(alert.getId());
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void dispatchById(UUID alertId) {
-        Alert alert = alertRepository.findById(alertId).orElse(null);
+        Alert alert = alertRepository.findByIdForDispatch(alertId).orElse(null);
         if (alert == null) {
             return;
         }
@@ -62,11 +74,15 @@ public class NotificationService {
         }
     }
 
-    /** Envoi EMAIL hors requête HTTP — le SMTP ne doit pas bloquer création / transmission. */
+    /**
+     * Envoi EMAIL hors requête HTTP — le SMTP ne doit pas bloquer création / transmission.
+     * Passe par le proxy {@link #self} pour activer {@code @Transactional} sur {@link #dispatchById}
+     * (un appel {@code this.dispatchById} contournerait AOP → LazyInitializationException / no session).
+     */
     @Async
     public void dispatchEmailAsync(UUID alertId) {
         try {
-            dispatchById(alertId);
+            self.dispatchById(alertId);
         } catch (Exception e) {
             log.warn("ALR: dispatch EMAIL async échoué pour {} : {}", alertId, e.getMessage());
         }
